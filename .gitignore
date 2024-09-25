@@ -7,3 +7,5 @@ public/
 # File system
 .DS_Store
 desktop.ini
+
+.idea/
