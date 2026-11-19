@@ -2,6 +2,7 @@
 
 [build]
   publish = "public"
+  command = "zola build"
 
 [[headers]]
   for = "/*"
