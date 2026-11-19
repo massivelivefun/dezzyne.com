@@ -17,12 +17,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
+          package-manager-cache: false
 
       - name: Install Zola 0.23.6
         run: |
@@ -42,7 +43,9 @@ jobs:
         run: zola build
 
       - name: Deploy to Netlify Production
-        run: npx --yes netlify-cli deploy --prod --dir=public --message="Deploy stable (${GITHUB_SHA::7})"
+        run: |
+          npm install --global netlify-cli
+          netlify deploy --prod --dir=public --message="Deploy stable (${GITHUB_SHA::7})"
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
