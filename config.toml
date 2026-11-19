@@ -1,16 +1,39 @@
 # The URL the site will be built for
 base_url = "https://www.dezzyne.com"
+title = "Dezzyne"
+default_language = "en"
 
 # Whether to automatically compile all Sass files in the sass directory
 compile_sass = true
 
 # Whether to build a search index to be used later on by a JavaScript library
-build_search_index = true
+build_search_index = false
 
 [markdown]
 # Syntax highlighting configuration (Zola 0.22+)
 [markdown.highlighting]
 theme = "github-dark"
 
+[translations]
+nav_about = "About"
+nav_games = "Games"
+nav_ugce = "UGCE"
+nav_contact = "Contact"
+back_all_games = "All Games"
+back_all_ugce = "All UGCE"
+label_platform = "Platform"
+form_honeypot = "Do not fill this out:"
+form_name = "Name"
+form_email = "Email"
+form_message = "Message"
+form_send = "Send"
+not_found_message = "There's nothing here, you should turn back..."
+footer_rights = "All rights reserved."
+
 [extra]
-# Put all your custom variables here
+socials = [
+  { id = "twitter", name = "Twitter", url = "https://x.com/dezzyne_soft", icon = "/img/icons/x.svg" },
+  { id = "youtube", name = "YouTube", url = "https://www.youtube.com/@dezzyne", icon = "/img/icons/youtube.svg" },
+  { id = "discord", name = "Discord", url = "", icon = "/img/icons/discord.svg" },
+  { id = "unity", name = "Unity Store", url = "https://assetstore.unity.com/", icon = "/img/icons/unity.svg" },
+]
