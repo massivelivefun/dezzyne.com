@@ -1,18 +1,70 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang }}">
   <head>
     <meta charset="utf-8">
-    <base href="/">
-    <link rel="icon" href="/favicon.ico">
-    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
-    <script src="./index.js" type="text/javascript"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="/style.css" rel="stylesheet">
-    <title>{% block title %}Dezzyne{% endblock title %}</title>
+    <link rel="icon" href="/favicon.ico">
+    {%- if page is defined %}
+      {%- set page_translations = page.translations %}
+    {%- elif section is defined %}
+      {%- set page_translations = section.translations %}
+    {%- else %}
+      {%- set page_translations = [] %}
+    {%- endif %}
+    {%- for t in page_translations %}
+    <link rel="alternate" hreflang="{{ t.lang }}" href="{{ t.permalink | safe }}">
+    {%- endfor %}
+    <title>{% block title %}{{ config.title }}{% endblock title %}</title>
   </head>
   <body>
-    <section class="section">
-      {% block container %}<div class="container">{% block content %} {% endblock %}</div>{% endblock container %}
-    </section>
+    {%- if lang == config.default_language %}
+      {%- set lang_prefix = "" %}
+    {%- else %}
+      {%- set lang_prefix = "/" ~ lang %}
+    {%- endif %}
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="{{ lang_prefix }}/" class="site-logo">[Dezzyne Logo]</a>
+        <nav class="site-nav" aria-label="Main navigation">
+          <ul class="nav-list">
+            <li><a href="{{ lang_prefix }}/about/">{{ trans(key="nav_about", lang=lang) }}</a></li>
+            <li><a href="{{ lang_prefix }}/games/">{{ trans(key="nav_games", lang=lang) }}</a></li>
+            <li><a href="{{ lang_prefix }}/ugce/">{{ trans(key="nav_ugce", lang=lang) }}</a></li>
+            <li><a href="{{ lang_prefix }}/contact/">{{ trans(key="nav_contact", lang=lang) }}</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <div class="site-stage">
+      <canvas id="wasm-canvas" class="wasm-canvas" aria-hidden="true"></canvas>
+      <main class="container site-main">
+        {% block content %}{% endblock content %}
+      </main>
+    </div>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <small>&copy; {{ now() | date(format="%Y") }} Dezzyne, LLC. {{ trans(key="footer_rights", lang=lang) }}</small>
+        <ul class="nav-list social-list">
+          {%- for social in config.extra.socials %}
+          <li>
+            {%- if social.url != "" %}
+            <a href="{{ social.url }}" class="social-link social-link--{{ social.id }}" aria-label="{{ social.name }}" target="_blank" rel="noopener noreferrer">
+              {{ load_data(path="static" ~ social.icon) | safe }}
+            </a>
+            {%- else %}
+            <button type="button" class="social-link social-link--{{ social.id }}" aria-label="{{ social.name }}">
+              {{ load_data(path="static" ~ social.icon) | safe }}
+            </button>
+            {%- endif %}
+          </li>
+          {%- endfor %}
+        </ul>
+      </div>
+    </footer>
+
     {% block scripts %}{% endblock scripts %}
   </body>
 </html>

@@ -1,7 +1,6 @@
-{% extends 'base.html' %} {% block content %}
-
+{% extends "base.html" %}
+{% block content %}
 <section class="not-found">
-    <h2 class="h3">There's nothing here, you should turn back...</h2>
+  <h2>{{ trans(key="not_found_message", lang=lang) }}</h2>
 </section>
-
-{% endblock %}
+{% endblock content %}
