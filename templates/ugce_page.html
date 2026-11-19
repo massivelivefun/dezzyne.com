@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
+{% block content %}
+{%- if lang == config.default_language %}{% set lang_prefix = "" %}{% else %}{% set lang_prefix = "/" ~ lang %}{% endif %}
+<p><a href="{{ lang_prefix }}/ugce/">&larr; {{ trans(key="back_all_ugce", lang=lang) }}</a></p>
+<h1>{{ page.title }}</h1>
+{% if page.extra.group is defined %}
+  <p>{{ trans(key="label_platform", lang=lang) }}: {{ page.extra.group }}</p>
+{% endif %}
+{{ page.content | safe }}
+{% endblock content %}
