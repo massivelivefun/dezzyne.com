@@ -1,10 +1,14 @@
+"$schema" = "https://open-api.netlify.com/netlify.schema.json"
+
 [build]
-base    = "/"
-publish = "public"
-command = "zola build"
+  base    = "/"
+  publish = "public"
+  command = "zola build"
+  ignore  = "[ \"$BRANCH\" != \"stable\" ]"
 
 [build.environment]
-ZOLA_VERSION = "0.14.1"
+  NODE_VERSION = "22"
+  ZOLA_VERSION = "0.23.6"
 
 [context.deploy-preview]
-command = "zola build --base_url $DEPLOY_PRIME_URL"
+  command = "zola build --base-url $DEPLOY_PRIME_URL"
