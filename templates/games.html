@@ -2,9 +2,12 @@
 {% block title %}{{ section.title }} | {{ config.title }}{% endblock title %}
 {% block content %}
 <h1>{{ section.title }}</h1>
+{%- if section.pages | length > 0 %}
 <ul>
   {%- for game in section.pages %}
   <li><a href="{{ game.path }}">{{ game.title }}</a></li>
   {%- endfor %}
 </ul>
+{%- endif %}
+{{ section.content | safe }}
 {% endblock content %}

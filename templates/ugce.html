@@ -2,12 +2,17 @@
 {% block title %}{{ section.title }} | {{ config.title }}{% endblock title %}
 {% block content %}
 <h1>{{ section.title }}</h1>
-{%- for platform, items in section.pages | group_by(attribute="extra.group") %}
+{%- if section.pages | length > 0 %}
+  {%- for platform, items in section.pages | group_by(attribute="extra.group") %}
 <h2>{{ platform }}</h2>
 <ul>
-  {%- for item in items %}
+    {%- for item in items %}
   <li><a href="{{ item.path }}">{{ item.title }}</a></li>
-  {%- endfor %}
+    {%- endfor %}
 </ul>
-{%- endfor %}
+  {%- endfor %}
+{%- else %}
+<h2>VRChat</h2>
+{%- endif %}
+{{ section.content | safe }}
 {% endblock content %}
