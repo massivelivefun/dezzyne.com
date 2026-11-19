@@ -1,12 +1,10 @@
-# Ignore node_modules that are built on project runs
-node_modules/
-dist/
+# Build outputs and local tool state
 target/
 public/
+node_modules/
+.netlify/
 
-# File system
+# File system and IDE
 .DS_Store
 desktop.ini
-
 .idea/
-.netlify/

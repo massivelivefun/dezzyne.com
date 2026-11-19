@@ -1,19 +1,15 @@
 # dezzyne.com
 
-A static frontend for the dezzyne organization.
+Official website for Dezzyne, LLC.
 
-## Tech Stack
+## Stack
 
-Zola Static Website Generator
-Yarn Javascript/Typescript Package Manager
-Rust Wasm Bindgen & Pack
+- **Static Site Generator:** [Zola](https://www.getzola.org/) (`0.23.6`)
+- **Interactive Graphics:** Rust + WebAssembly (`wasm-pack --target web`)
+- **Hosting & Forms:** Netlify (deployed from `stable` via GitHub Actions)
 
-## Goals
-Make JavaScript files follow EC6 syntax.
-Make most script files in Typescript, not Javascript.
-Improve the toolchain so `--target web` is no longer needed.
-Try to incorporate deno and it's std.
+## Local Development
 
-## Resources
-https://rustwasm.github.io/docs/wasm-pack/introduction.html
-https://rustwasm.github.io/docs/wasm-bindgen/introduction.html
+```bash
+zola serve
+```
