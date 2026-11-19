@@ -1,12 +1,26 @@
-{% extends "base.html" -%}
-
-{% block title %}{{page.title}} - {{super()}}{% endblock -%}
-
-{% block container %}
-<section id="intro">
-    <p>CONTACT</p>
-</section>
-{% endblock -%}
-
-{% block scripts %}
-{% endblock -%}
+{% extends "base.html" %}
+{% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
+{% block content %}
+<h1>{{ page.title }}</h1>
+<form name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+  <input type="hidden" name="form-name" value="contact">
+  <div class="honeypot" aria-hidden="true">
+    <label>{{ trans(key="form_honeypot", lang=lang) }} <input name="bot-field" tabindex="-1" autocomplete="off"></label>
+  </div>
+  <p>
+    <label for="name">{{ trans(key="form_name", lang=lang) }}</label><br>
+    <input type="text" id="name" name="name" required>
+  </p>
+  <p>
+    <label for="email">{{ trans(key="form_email", lang=lang) }}</label><br>
+    <input type="email" id="email" name="email" required>
+  </p>
+  <p>
+    <label for="message">{{ trans(key="form_message", lang=lang) }}</label><br>
+    <textarea id="message" name="message" rows="5" required></textarea>
+  </p>
+  <p>
+    <button type="submit">{{ trans(key="form_send", lang=lang) }}</button>
+  </p>
+</form>
+{% endblock content %}
