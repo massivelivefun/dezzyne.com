@@ -3,6 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
     <link href="/style.css" rel="stylesheet">
     <link rel="icon" href="/favicon.ico">
     {%- if page is defined %}
@@ -24,15 +26,13 @@
       {%- set lang_prefix = "/" ~ lang %}
     {%- endif %}
     <header class="site-header">
-      <div class="container header-inner">
+      <div class="container banner-inner">
         <a href="{{ lang_prefix }}/" class="site-logo">[Dezzyne Logo]</a>
-        <nav class="site-nav" aria-label="Main navigation">
-          <ul class="nav-list">
-            <li><a href="{{ lang_prefix }}/about/">{{ trans(key="nav_about", lang=lang) }}</a></li>
-            <li><a href="{{ lang_prefix }}/games/">{{ trans(key="nav_games", lang=lang) }}</a></li>
-            <li><a href="{{ lang_prefix }}/ugce/">{{ trans(key="nav_ugce", lang=lang) }}</a></li>
-            <li><a href="{{ lang_prefix }}/contact/">{{ trans(key="nav_contact", lang=lang) }}</a></li>
-          </ul>
+        <nav class="header-nav" aria-label="Main navigation">
+          <a href="{{ lang_prefix }}/about/">{{ trans(key="nav_about", lang=lang) }}</a>
+          <a href="{{ lang_prefix }}/games/">{{ trans(key="nav_games", lang=lang) }}</a>
+          <a href="{{ lang_prefix }}/ugce/">{{ trans(key="nav_ugce", lang=lang) }}</a>
+          <a href="{{ lang_prefix }}/contact/">{{ trans(key="nav_contact", lang=lang) }}</a>
         </nav>
       </div>
     </header>
@@ -45,23 +45,21 @@
     </div>
 
     <footer class="site-footer">
-      <div class="container footer-inner">
-        <small>&copy; {{ now() | date(format="%Y") }} Dezzyne, LLC. {{ trans(key="footer_rights", lang=lang) }}</small>
-        <ul class="nav-list social-list">
+      <div class="container banner-inner">
+        <small class="footer-copy">&copy; {{ now() | date(format="%Y") }} Dezzyne, LLC. {{ trans(key="footer_rights", lang=lang) }}</small>
+        <div class="social-links">
           {%- for social in config.extra.socials %}
-          <li>
             {%- if social.url != "" %}
-            <a href="{{ social.url }}" class="social-link social-link--{{ social.id }}" aria-label="{{ social.name }}" target="_blank" rel="noopener noreferrer">
-              {{ load_data(path="static" ~ social.icon) | safe }}
-            </a>
+          <a href="{{ social.url }}" class="social-link social-link--{{ social.id }}" aria-label="{{ social.name }}" target="_blank" rel="noopener noreferrer">
+            {{ load_data(path="static" ~ social.icon) | safe }}
+          </a>
             {%- else %}
-            <button type="button" class="social-link social-link--{{ social.id }}" aria-label="{{ social.name }}">
-              {{ load_data(path="static" ~ social.icon) | safe }}
-            </button>
+          <button type="button" class="social-link social-link--{{ social.id }}" aria-label="{{ social.name }}">
+            {{ load_data(path="static" ~ social.icon) | safe }}
+          </button>
             {%- endif %}
-          </li>
           {%- endfor %}
-        </ul>
+        </div>
       </div>
     </footer>
 

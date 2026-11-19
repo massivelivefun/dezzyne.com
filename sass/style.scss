@@ -1,3 +1,7 @@
+:root {
+  color-scheme: dark;
+}
+
 *,
 *::before,
 *::after {
@@ -27,6 +31,7 @@ a {
 }
 
 .container {
+  width: 100%;
   max-width: 72rem;
   margin: 0 auto;
   padding: 0 2rem;
@@ -37,24 +42,42 @@ a {
   z-index: 10;
   background-color: #000000;
   color: #f0f0f0;
-  padding: 1rem 0;
 }
 
-.header-inner,
-.footer-inner {
+.site-footer {
+  background-color: #000000;
+  color: #f0f0f0;
+}
+
+.banner-inner {
+  height: 3.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
 }
 
-.nav-list {
-  list-style: none;
+.header-nav {
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  margin: 0;
-  padding: 0;
+}
+
+.site-logo,
+.header-nav a,
+.footer-copy {
+  display: block;
+  line-height: 1;
+  text-box-trim: trim-both;
+  text-box-edge: ex alphabetic;
+}
+
+@supports not (text-box-trim: trim-both) {
+  .site-logo,
+  .header-nav a,
+  .footer-copy {
+    transform: translateY(0.08em);
+  }
 }
 
 .site-stage {
@@ -77,26 +100,31 @@ a {
 .site-main {
   position: relative;
   z-index: 1;
-  padding-top: 2rem;
-  padding-bottom: 3rem;
+  padding-top: 1.25rem;
+  padding-bottom: 2.5rem;
+
+  > :first-child {
+    margin-top: 0;
+  }
 }
 
-.site-footer {
-  background-color: #000000;
-  color: #f0f0f0;
-  padding: 1.25rem 0;
-}
-
-.social-list {
-  color: #767676;
+.social-links {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
 }
 
 .social-link {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  background: none;
-  border: none;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
   padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  line-height: 0;
   cursor: pointer;
 
   svg {
@@ -131,3 +159,4 @@ a {
 .honeypot {
   display: none;
 }
+
