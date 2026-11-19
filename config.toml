@@ -15,6 +15,7 @@ build_search_index = false
 theme = "github-dark"
 
 [translations]
+language_name = "English"
 nav_about = "About"
 nav_games = "Games"
 nav_ugce = "UGCE"
@@ -28,6 +29,90 @@ form_email = "Email"
 form_message = "Message"
 form_send = "Send"
 not_found_message = "There's nothing here, you should turn back..."
+footer_rights = "All rights reserved."
+
+[languages.es]
+title = "Dezzyne"
+build_search_index = false
+
+[languages.es.translations]
+language_name = "Español"
+nav_about = "Acerca de"
+nav_games = "Juegos"
+nav_ugce = "UGCE"
+nav_contact = "Contacto"
+back_all_games = "Todos los juegos"
+back_all_ugce = "Todo el UGCE"
+label_platform = "Plataforma"
+form_honeypot = "No rellenes este campo:"
+form_name = "Nombre"
+form_email = "Correo electrónico"
+form_message = "Mensaje"
+form_send = "Enviar"
+not_found_message = "No hay nada aquí, deberías volver atrás..."
+footer_rights = "Todos los derechos reservados."
+
+[languages.fr]
+title = "Dezzyne"
+build_search_index = false
+
+[languages.fr.translations]
+language_name = "Français"
+nav_about = "À propos"
+nav_games = "Jeux"
+nav_ugce = "UGCE"
+nav_contact = "Contact"
+back_all_games = "Tous les jeux"
+back_all_ugce = "Tout l'UGCE"
+label_platform = "Plateforme"
+form_honeypot = "Ne remplissez pas ce champ :"
+form_name = "Nom"
+form_email = "E-mail"
+form_message = "Message"
+form_send = "Envoyer"
+not_found_message = "Il n'y a rien ici, vous devriez faire demi-tour..."
+footer_rights = "Tous droits réservés."
+
+[languages.de]
+title = "Dezzyne"
+build_search_index = false
+
+[languages.de.translations]
+language_name = "Deutsch"
+nav_about = "Über uns"
+nav_games = "Spiele"
+nav_ugce = "UGCE"
+nav_contact = "Kontakt"
+back_all_games = "Alle Spiele"
+back_all_ugce = "Alle UGCE-Inhalte"
+label_platform = "Plattform"
+form_honeypot = "Dieses Feld nicht ausfüllen:"
+form_name = "Name"
+form_email = "E-Mail"
+form_message = "Nachricht"
+form_send = "Senden"
+not_found_message = "Hier gibt es nichts, du solltest umkehren..."
+footer_rights = "Alle Rechte vorbehalten."
+
+[languages.ja]
+title = "Dezzyne"
+build_search_index = false
+
+[languages.ja.translations]
+language_name = "日本語"
+nav_about = "概要"
+nav_games = "ゲーム"
+nav_ugce = "UGCE"
+nav_contact = "お問い合わせ"
+back_all_games = "すべてのゲーム"
+back_all_ugce = "すべてのUGCE"
+label_platform = "プラットフォーム"
+form_honeypot = "入力しないでください:"
+form_name = "お名前"
+form_email = "メールアドレス"
+form_message = "メッセージ"
+form_send = "送信"
+not_found_message = "ページが見つかりません。"
 footer_rights = "All rights reserved."
 
 [extra]
