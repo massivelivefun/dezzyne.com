@@ -1,3 +1,6 @@
-# Netlify redirect to 404.html
-# See https://docs.netlify.com/routing/redirects/
-/*  /404.html  404
+# Redirect explicit /en paths to clean default root paths
+/en    /         301
+/en/*  /:splat   301
+
+# Netlify fallback to 404.html
+/*     /404.html 404
