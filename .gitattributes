@@ -1,10 +1,31 @@
-# The rest
-*           text=auto eol=lf
+# Default text normalization
+*               text=auto eol=lf
 
-# Documentation
-*.md        text
-LICENSE     text
+# Source, templates, styles, and configuration
+*.css           text eol=lf
+*.html          text eol=lf
+*.js            text eol=lf
+*.rs            text eol=lf
+*.svg           text eol=lf
+*.toml          text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+_headers        text eol=lf
+_redirects      text eol=lf
 
-# Media
-*.jpg       binary
-*.png       binary
+# Documentation and licenses
+*.md            text eol=lf
+*.txt           text eol=lf
+LICENSE-*       text eol=lf
+
+# Binary assets and compiled WebAssembly
+*.avif          binary
+*.gif           binary
+*.ico           binary
+*.jpeg          binary
+*.jpg           binary
+*.png           binary
+*.wasm          binary
+*.webp          binary
+*.woff          binary
+*.woff2         binary

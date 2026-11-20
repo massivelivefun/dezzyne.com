@@ -1,10 +1,17 @@
-# Build outputs and local tool state
-target/
-public/
-node_modules/
-.netlify/
+# Zola and Rust build outputs
+/public/
+/rust/target/
 
-# File system and IDE
+# Local CLI and tooling state
+/.netlify/
+/node_modules/
+
+# OS metadata
 .DS_Store
+Thumbs.db
 desktop.ini
-.idea/
+
+# Editor directories and swap files
+/.idea/
+/.vscode/
+*.swp
