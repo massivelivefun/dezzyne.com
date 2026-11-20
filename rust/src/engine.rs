@@ -65,9 +65,8 @@ impl Engine {
         self.slow_frame_accum = 0.0;
 
         self.portal.init(portal_enabled != 0, rng_seed);
-        self.grid.step_camera(
-            0.016, 1.0, self.time, self.size, self.mouse, false, true,
-        );
+        self.grid
+            .step_camera(0.016, 1.0, self.size, self.mouse, false, true);
         self.portal.step(
             0.0, 1.0, self.time, self.size, self.mouse, false, &self.grid,
         );
@@ -135,7 +134,6 @@ impl Engine {
         self.grid.step_camera(
             safe_dt,
             m_scale,
-            self.time,
             self.size,
             self.mouse,
             self.pointer_active,

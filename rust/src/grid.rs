@@ -68,46 +68,29 @@ impl GridCamera {
         (rot * Vec3::X, rot * Vec3::Y, rot * Vec3::Z)
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn step_camera(
         &mut self,
         safe_dt: f32,
         motion_scale: f32,
-        time: f32,
         size: Vec2,
         mouse: Vec2,
         pointer_active: bool,
         snap: bool,
     ) {
         let safe_size = size.max(Vec2::ONE);
-        let mobile_mix = ((900.0 - safe_size.x) / 300.0).clamp(0.0, 1.0);
-
-        let sway_amp_x = 0.06 + mobile_mix * 0.42;
-        let sway_amp_y = 0.025 + mobile_mix * 0.035;
-        let sway_freq = 0.32 + mobile_mix * 0.16;
-
-        let primary_x = (time * sway_freq).sin();
-        let harmonic_x = (time * sway_freq * 0.53 + 1.1).sin() * 0.20;
-        let idle_sway_x =
-            (primary_x + harmonic_x) * (sway_amp_x / 1.20) * motion_scale;
-        let idle_sway_y = (time * 0.26).cos() * sway_amp_y * motion_scale;
 
         let norm = if pointer_active {
             (((mouse / safe_size) - Vec2::splat(0.5)) * 2.0)
                 .clamp(Vec2::NEG_ONE, Vec2::ONE)
         } else {
-            Vec2::new(idle_sway_x, idle_sway_y)
+            Vec2::ZERO
         };
 
-        let dolly_x = 0.52 + mobile_mix * 0.48;
-        let yaw_gain = 0.082 - mobile_mix * 0.140;
-        let roll_gain = 0.018 + mobile_mix * 0.008;
-
-        self.cam_x.target = norm.x * dolly_x;
+        self.cam_x.target = norm.x * 0.52;
         self.cam_y.target = -norm.y * 0.20;
-        self.cam_yaw.target = norm.x * yaw_gain;
+        self.cam_yaw.target = norm.x * 0.082;
         self.cam_pitch.target = -0.14 - norm.y * 0.052;
-        self.cam_roll.target = -norm.x * roll_gain;
+        self.cam_roll.target = -norm.x * 0.018;
 
         if snap {
             self.cam_x.snap(self.cam_x.target);
