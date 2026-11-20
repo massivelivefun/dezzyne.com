@@ -1,0 +1,54 @@
+name: Deploy Stable
+run-name: Deploy ${{ github.ref_name }}
+
+on:
+  push:
+    branches:
+      - stable
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-stable:
+    name: Build & Publish Production (Stable)
+    if: github.ref == 'refs/heads/stable'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          package-manager-cache: false
+
+      - name: Install Zola 0.23.6
+        run: |
+          curl -sSfL https://github.com/getzola/zola/releases/download/v0.23.6/zola-v0.23.6-x86_64-unknown-linux-gnu.tar.gz \
+            | sudo tar xz -C /usr/local/bin
+          zola --version
+
+      - name: Build Rust WASM (if present)
+        run: |
+          if [ -f rust/Cargo.toml ]; then
+            rustup target add wasm32-unknown-unknown
+            curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+            wasm-pack build rust --target web --out-dir ../static/wasm
+          fi
+
+      - name: Check and build Zola site
+        run: |
+          zola check
+          zola build
+
+      - name: Publish production deploy to Netlify
+        run: |
+          npm install --global netlify-cli
+          netlify deploy --no-build --prod --dir=public --message="Deploy stable (${GITHUB_SHA::7})"
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}

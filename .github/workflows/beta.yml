@@ -1,18 +1,19 @@
-name: Deploy to Netlify (Stable)
+name: Deploy Beta
+run-name: Deploy ${{ github.ref_name }}
 
 on:
   push:
     branches:
-      - stable
+      - beta
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  deploy:
-    name: Build Zola & Deploy to Netlify
-    if: github.ref == 'refs/heads/stable'
+  deploy-beta:
+    name: Build & Draft Deploy (Beta)
+    if: github.ref == 'refs/heads/beta'
     runs-on: ubuntu-latest
 
     steps:
@@ -39,13 +40,15 @@ jobs:
             wasm-pack build rust --target web --out-dir ../static/wasm
           fi
 
-      - name: Build Zola site
-        run: zola build
+      - name: Check and build Zola site
+        run: |
+          zola check
+          zola build
 
-      - name: Deploy to Netlify Production
+      - name: Draft deploy to Netlify
         run: |
           npm install --global netlify-cli
-          netlify deploy --no-build --prod --dir=public --message="Deploy stable (${GITHUB_SHA::7})"
+          netlify deploy --no-build --dir=public --message="Verify beta (${GITHUB_SHA::7})"
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
