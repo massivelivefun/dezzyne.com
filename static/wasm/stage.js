@@ -1137,46 +1137,48 @@ async function boot() {
     );
 
     let activeTouchId = null;
-    let touchStartX = 0;
-    let touchDragging = false;
-
-    function isInteractiveTarget(target) {
-        if (!(target instanceof Element)) {
-            return false;
-        }
-        return Boolean(
-            target.closest("input, textarea, select, button, a, label")
-        );
-    }
 
     function endTouch(pointerId) {
         if (activeTouchId !== pointerId) {
             return;
         }
         activeTouchId = null;
-        touchDragging = false;
         if (!stopped) {
             wasm.pointer_leave();
             stage.classList.remove("site-stage--portal-hover");
         }
     }
 
-    stage.addEventListener(
+    canvas.addEventListener(
+        "touchmove",
+        (e) => {
+            if (activeTouchId !== null && e.cancelable) {
+                e.preventDefault();
+            }
+        },
+        { passive: false, signal }
+    );
+
+    canvas.addEventListener(
         "pointerdown",
         (e) => {
             if (stopped || e.pointerType !== "touch") {
                 return;
             }
-            if (activeTouchId !== null || isInteractiveTarget(e.target)) {
+            if (activeTouchId !== null) {
                 return;
             }
             if (!Number.isFinite(e.clientX) || !Number.isFinite(e.clientY)) {
                 return;
             }
-            const rect = stage.getBoundingClientRect();
             activeTouchId = e.pointerId;
-            touchStartX = e.clientX - rect.left;
-            touchDragging = false;
+            try {
+                canvas.setPointerCapture(e.pointerId);
+            } catch {
+                // Ignore if synthetic pointer cannot be captured.
+            }
+            const rect = stage.getBoundingClientRect();
+            wasm.pointer_move(e.clientX - rect.left, e.clientY - rect.top);
         },
         { passive: true, signal }
     );
@@ -1190,34 +1192,16 @@ async function boot() {
             if (!Number.isFinite(e.clientX) || !Number.isFinite(e.clientY)) {
                 return;
             }
-            const rect = stage.getBoundingClientRect();
-            const px = e.clientX - rect.left;
-            const py = e.clientY - rect.top;
-
-            if (e.pointerType === "touch") {
-                if (e.pointerId !== activeTouchId) {
-                    return;
-                }
-                const dx = px - touchStartX;
-                if (!touchDragging && Math.abs(dx) > 4) {
-                    touchDragging = true;
-                }
-                if (touchDragging) {
-                    const minX = cssW * 0.16;
-                    const maxX = cssW * 0.84;
-                    const rawX = cssW * 0.5 + dx * 1.15;
-                    const vx = Math.min(maxX, Math.max(minX, rawX));
-                    wasm.pointer_move(vx, py);
-                }
+            if (e.pointerType === "touch" && e.pointerId !== activeTouchId) {
                 return;
             }
-
-            wasm.pointer_move(px, py);
+            const rect = stage.getBoundingClientRect();
+            wasm.pointer_move(e.clientX - rect.left, e.clientY - rect.top);
         },
         { passive: true, signal }
     );
 
-    stage.addEventListener(
+    canvas.addEventListener(
         "pointerup",
         (e) => {
             if (e.pointerType === "touch") {
@@ -1227,7 +1211,7 @@ async function boot() {
         { passive: true, signal }
     );
 
-    stage.addEventListener(
+    canvas.addEventListener(
         "pointercancel",
         (e) => {
             if (e.pointerType === "touch") {
@@ -1237,11 +1221,18 @@ async function boot() {
         { passive: true, signal }
     );
 
+    canvas.addEventListener(
+        "lostpointercapture",
+        (e) => {
+            endTouch(e.pointerId);
+        },
+        { passive: true, signal }
+    );
+
     stage.addEventListener(
         "pointerleave",
         (e) => {
             if (e.pointerType === "touch") {
-                endTouch(e.pointerId);
                 return;
             }
             if (!stopped) {
