@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="dark">
     <meta name="darkreader-lock">
-    <link href="/style.css" rel="stylesheet">
+    <style>{{ load_data(path="templates/style.css") | safe }}</style>
     <link rel="icon" href="/favicon.ico">
     {%- if page is defined %}
       {%- set page_translations = page.translations %}
