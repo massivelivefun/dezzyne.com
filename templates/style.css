@@ -118,8 +118,8 @@ a {
 .site-main {
   position: relative;
   z-index: 2;
-  margin-top: auto;
-  margin-bottom: auto;
+  margin-top: 0;
+  margin-bottom: 0;
   padding-top: 2.5rem;
   padding-bottom: 2.5rem;
 }
@@ -136,6 +136,8 @@ a {
 @media (min-width: 769px) {
   .site-main {
     position: static;
+    margin-top: auto;
+    margin-bottom: auto;
     padding-top: 2rem;
     padding-bottom: 2rem;
   }
