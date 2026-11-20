@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v5
@@ -28,7 +30,10 @@ jobs:
 
       - name: Install Zola 0.23.6
         run: |
-          curl -sSfL https://github.com/getzola/zola/releases/download/v0.23.6/zola-v0.23.6-x86_64-unknown-linux-gnu.tar.gz \
+          ZOLA_URL="https://github.com/getzola/zola/releases/download"
+          ZOLA_TAR="zola-v0.23.6-x86_64-unknown-linux-gnu.tar.gz"
+          curl --proto '=https' --tlsv1.2 -sSfL \
+            "${ZOLA_URL}/v0.23.6/${ZOLA_TAR}" \
             | sudo tar xz -C /usr/local/bin
           zola --version
 
@@ -36,8 +41,13 @@ jobs:
         run: |
           if [ -f rust/Cargo.toml ]; then
             rustup target add wasm32-unknown-unknown
-            curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-            wasm-pack build rust --target web --out-dir ../static/wasm
+            cargo build \
+              --manifest-path rust/Cargo.toml \
+              --target wasm32-unknown-unknown \
+              --release
+            mkdir -p static/wasm
+            WASM_OUT="rust/target/wasm32-unknown-unknown/release"
+            cp "${WASM_OUT}/dezzyne_bg.wasm" static/wasm/dezzyne_bg.wasm
           fi
 
       - name: Check and build Zola site
@@ -45,10 +55,22 @@ jobs:
           zola check
           zola build
 
+      - name: Verify CSP style-src SHA-256 hash
+        run: |
+          CSS_HASH="$(openssl dgst -sha256 -binary templates/style.css \
+            | openssl base64 -A)"
+          if ! grep -Fq "sha256-${CSS_HASH}" netlify.toml; then
+            echo "CSP style-src hash mismatch! Expected: sha256-${CSS_HASH}"
+            exit 1
+          fi
+
       - name: Draft deploy to Netlify
         run: |
           npm install --global netlify-cli
-          netlify deploy --no-build --dir=public --message="Verify beta (${GITHUB_SHA::7})"
+          netlify deploy \
+            --no-build \
+            --dir=public \
+            --message="Verify beta (${GITHUB_SHA::7})"
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
