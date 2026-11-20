@@ -95,6 +95,10 @@ a {
   overflow-x: clip;
 }
 
+.site-stage--portal-hover {
+  cursor: pointer;
+}
+
 .wasm-canvas {
   position: absolute;
   inset: 0;

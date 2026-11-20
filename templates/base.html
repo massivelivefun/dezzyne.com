@@ -55,6 +55,7 @@
       <canvas
         id="wasm-canvas"
         class="wasm-canvas"
+        {%- block wasm_attrs %}{% endblock wasm_attrs %}
         aria-hidden="true"></canvas>
       <main class="container site-main">
         {% block content %}{% endblock content %}
@@ -91,6 +92,7 @@
       </div>
     </footer>
 
+    <script type="module" src="/wasm/stage.js"></script>
     {% block scripts %}{% endblock scripts %}
   </body>
 </html>

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ section.title }} | {{ config.title }}{% endblock title %}
+{% block wasm_attrs %} data-portal="1"{% endblock wasm_attrs %}
 {% block content %}
 <h1 class="page-title">{{ section.title }}</h1>
 {%- if section.pages | length > 0 %}
