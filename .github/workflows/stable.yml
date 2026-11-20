@@ -13,7 +13,9 @@ permissions:
 jobs:
   deploy-stable:
     name: Build & Publish Production (Stable)
-    if: github.ref == 'refs/heads/stable'
+    if: >-
+      github.repository == 'dezzyne/dezzyne.com' &&
+      github.ref == 'refs/heads/stable'
     runs-on: ubuntu-latest
 
     steps:

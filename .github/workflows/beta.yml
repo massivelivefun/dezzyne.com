@@ -13,7 +13,9 @@ permissions:
 jobs:
   deploy-beta:
     name: Build & Draft Deploy (Beta)
-    if: github.ref == 'refs/heads/beta'
+    if: >-
+      github.repository == 'dezzyne/dezzyne.com' &&
+      github.ref == 'refs/heads/beta'
     runs-on: ubuntu-latest
 
     steps:
