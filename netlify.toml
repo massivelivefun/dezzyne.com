@@ -7,8 +7,44 @@
 [[headers]]
   for = "/*"
   [headers.values]
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
+    X-DNS-Prefetch-Control = "off"
+    X-Permitted-Cross-Domain-Policies = "none"
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "require-corp"
+    Cross-Origin-Resource-Policy = "same-origin"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    Permissions-Policy = """\
+      accelerometer=(), autoplay=(), bluetooth=(), browsing-topics=(), \
+      camera=(), display-capture=(), fullscreen=(), geolocation=(), \
+      gyroscope=(), hid=(), interest-cohort=(), magnetometer=(), \
+      microphone=(), midi=(), payment=(), picture-in-picture=(), \
+      screen-wake-lock=(), serial=(), usb=(), xr-spatial-tracking=()\
+      """
+    Content-Security-Policy = """\
+      default-src 'none'; \
+      script-src 'self' 'wasm-unsafe-eval'; \
+      style-src 'sha256-k0k/xlEY7tXreyfkk07tDJ4RoIyPvNw8UoeCAyELTkY='; \
+      img-src 'self'; \
+      connect-src 'self'; \
+      base-uri 'none'; \
+      form-action 'self'; \
+      frame-ancestors 'none'; \
+      require-trusted-types-for 'script'; \
+      trusted-types 'none'; \
+      upgrade-insecure-requests\
+      """
+
+[[headers]]
+  for = "/wasm/*.wasm"
+  [headers.values]
+    Content-Type = "application/wasm"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/wasm/*.js"
+  [headers.values]
+    Content-Type = "text/javascript; charset=utf-8"
+    X-Content-Type-Options = "nosniff"
