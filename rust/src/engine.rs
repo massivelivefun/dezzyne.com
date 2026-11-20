@@ -1,13 +1,13 @@
-use std::cell::UnsafeCell;
+use std::cell::RefCell;
+
+use glam::Vec2;
 
 use crate::grid::GridCamera;
 use crate::portal::Portal;
 
 pub struct Engine {
-    width: f32,
-    height: f32,
-    mouse_x: f32,
-    mouse_y: f32,
+    size: Vec2,
+    mouse: Vec2,
     pointer_active: bool,
     time: f32,
     quality_tier: u32,
@@ -16,22 +16,23 @@ pub struct Engine {
     pub portal: Portal,
 }
 
-struct SyncEngine(UnsafeCell<Engine>);
-unsafe impl Sync for SyncEngine {}
+thread_local! {
+    static ENGINE: RefCell<Engine> = RefCell::new(Engine::new());
+}
 
-static STATE: SyncEngine = SyncEngine(UnsafeCell::new(Engine::new()));
+pub fn with_engine<R>(f: impl FnOnce(&Engine) -> R) -> R {
+    ENGINE.with(|cell| f(&cell.borrow()))
+}
 
-pub fn state() -> &'static mut Engine {
-    unsafe { &mut *STATE.0.get() }
+pub fn with_engine_mut<R>(f: impl FnOnce(&mut Engine) -> R) -> R {
+    ENGINE.with(|cell| f(&mut cell.borrow_mut()))
 }
 
 impl Engine {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
-            width: 1280.0,
-            height: 720.0,
-            mouse_x: -9999.0,
-            mouse_y: -9999.0,
+            size: Vec2::new(1280.0, 720.0),
+            mouse: Vec2::splat(-9999.0),
             pointer_active: false,
             time: 0.0,
             quality_tier: 0,
@@ -48,52 +49,30 @@ impl Engine {
         portal_enabled: u32,
         rng_seed: u32,
     ) {
-        if width.is_finite() {
-            self.width = width.clamp(1.0, 16384.0);
+        let w = if width.is_finite() {
+            width.clamp(1.0, 16384.0)
         } else {
-            self.width = 1280.0;
-        }
-        if height.is_finite() {
-            self.height = height.clamp(1.0, 16384.0);
+            1280.0
+        };
+        let h = if height.is_finite() {
+            height.clamp(1.0, 16384.0)
         } else {
-            self.height = 720.0;
-        }
+            720.0
+        };
+        self.size = Vec2::new(w, h);
         self.pointer_active = false;
         self.quality_tier = 0;
         self.slow_frame_accum = 0.0;
 
         self.portal.init(portal_enabled != 0, rng_seed);
         self.grid.step_camera(
-            0.016,
-            1.0,
-            self.time,
-            self.width,
-            self.height,
-            self.mouse_x,
-            self.mouse_y,
-            false,
-            true,
+            0.016, 1.0, self.time, self.size, self.mouse, false, true,
         );
         self.portal.step(
-            0.0,
-            1.0,
-            self.time,
-            self.width,
-            self.height,
-            self.mouse_x,
-            self.mouse_y,
-            false,
-            &self.grid,
+            0.0, 1.0, self.time, self.size, self.mouse, false, &self.grid,
         );
         self.grid.step_cursor_light(
-            0.016,
-            self.width,
-            self.height,
-            self.mouse_x,
-            self.mouse_y,
-            false,
-            None,
-            true,
+            0.016, self.size, self.mouse, false, None, true,
         );
     }
 
@@ -101,16 +80,16 @@ impl Engine {
         if !width.is_finite() || !height.is_finite() {
             return;
         }
-        self.width = width.clamp(1.0, 16384.0);
-        self.height = height.clamp(1.0, 16384.0);
+        self.size =
+            Vec2::new(width.clamp(1.0, 16384.0), height.clamp(1.0, 16384.0));
     }
 
     pub fn pointer_move(&mut self, x: f32, y: f32) {
         if !x.is_finite() || !y.is_finite() {
             return;
         }
-        self.mouse_x = x.clamp(-16384.0, 32768.0);
-        self.mouse_y = y.clamp(-16384.0, 32768.0);
+        self.mouse =
+            Vec2::new(x.clamp(-16384.0, 32768.0), y.clamp(-16384.0, 32768.0));
         self.pointer_active = true;
     }
 
@@ -123,7 +102,7 @@ impl Engine {
         if !x.is_finite() || !y.is_finite() {
             return 0;
         }
-        if self.portal.click(x, y) {
+        if self.portal.click(Vec2::new(x, y)) {
             1
         } else {
             0
@@ -149,18 +128,16 @@ impl Engine {
                 self.quality_tier = 2;
             }
         } else if raw_dt <= 0.022 {
-            self.slow_frame_accum = (self.slow_frame_accum - raw_dt * 0.5)
-                .max(0.0);
+            self.slow_frame_accum =
+                (self.slow_frame_accum - raw_dt * 0.5).max(0.0);
         }
 
         self.grid.step_camera(
             safe_dt,
             m_scale,
             self.time,
-            self.width,
-            self.height,
-            self.mouse_x,
-            self.mouse_y,
+            self.size,
+            self.mouse,
             self.pointer_active,
             false,
         );
@@ -168,10 +145,8 @@ impl Engine {
             safe_dt,
             m_scale,
             self.time,
-            self.width,
-            self.height,
-            self.mouse_x,
-            self.mouse_y,
+            self.size,
+            self.mouse,
             self.pointer_active,
             &self.grid,
         );
@@ -179,10 +154,8 @@ impl Engine {
         let hovered_anchor = self.portal.hovered_floor_anchor();
         self.grid.step_cursor_light(
             safe_dt,
-            self.width,
-            self.height,
-            self.mouse_x,
-            self.mouse_y,
+            self.size,
+            self.mouse,
             self.pointer_active,
             hovered_anchor,
             false,

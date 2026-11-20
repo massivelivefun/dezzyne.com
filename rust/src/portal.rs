@@ -1,5 +1,9 @@
 use std::f32::consts::TAU;
 
+use glam::{Vec2, Vec3};
+use rand::rngs::SmallRng;
+use rand::{RngExt, SeedableRng};
+
 use crate::grid::GridCamera;
 use crate::spring::Spring;
 
@@ -50,7 +54,7 @@ pub struct Portal {
     scale: Spring,
     instance_id: u32,
     player_count: u32,
-    rng_state: u32,
+    rng: SmallRng,
     ring_ages: [f32; MAX_RINGS],
     particles: [Particle; PARTICLE_COUNT],
     portal_buf: [f32; PORTAL_FLOATS],
@@ -59,7 +63,7 @@ pub struct Portal {
 }
 
 impl Portal {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             enabled: false,
             hovered: false,
@@ -67,29 +71,13 @@ impl Portal {
             scale: Spring::new(0.0),
             instance_id: 48291,
             player_count: 64,
-            rng_state: 0x9e37_79b9,
+            rng: SmallRng::seed_from_u64(0x9e37_79b9_7f4a_7c15),
             ring_ages: [-1.0; MAX_RINGS],
             particles: [Particle::zero(); PARTICLE_COUNT],
             portal_buf: [0.0; PORTAL_FLOATS],
             ring_buf: [0.0; RING_FLOATS],
             particle_buf: [0.0; PARTICLE_COUNT * PARTICLE_FLOATS],
         }
-    }
-
-    fn next_u32(&mut self) -> u32 {
-        let mut x = self.rng_state;
-        if x == 0 {
-            x = 0x9e37_79b9;
-        }
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        self.rng_state = x;
-        x
-    }
-
-    fn rand01(&mut self) -> f32 {
-        (self.next_u32() >> 8) as f32 * (1.0 / 16_777_216.0)
     }
 
     pub fn spawn_ring(&mut self) {
@@ -115,22 +103,28 @@ impl Portal {
     }
 
     fn spawn_particle(&mut self, idx: usize, initial_spread: bool) {
-        let angle = self.rand01() * TAU;
-        let is_streak = self.rand01() < 0.42;
+        let angle = self.rng.random_range(0.0..TAU);
+        let is_streak = self.rng.random_bool(0.42);
         let dist = if initial_spread {
-            0.14 + self.rand01() * 1.62
+            self.rng.random_range(0.14..1.76)
         } else {
-            1.10 + self.rand01() * 0.72
+            self.rng.random_range(1.10..1.82)
         };
 
         let (speed, size) = if is_streak {
-            (0.54 + self.rand01() * 0.30, 1.8 + self.rand01() * 1.1)
+            (
+                self.rng.random_range(0.54..0.84),
+                self.rng.random_range(1.8..2.9),
+            )
         } else {
-            (0.22 + self.rand01() * 0.16, 2.5 + self.rand01() * 2.1)
+            (
+                self.rng.random_range(0.22..0.38),
+                self.rng.random_range(2.5..4.6),
+            )
         };
 
-        let shade = self.rand01();
-        let phase = self.rand01() * TAU;
+        let shade = self.rng.random_range(0.0..1.0);
+        let phase = self.rng.random_range(0.0..TAU);
 
         self.particles[idx] = Particle {
             angle,
@@ -146,15 +140,11 @@ impl Portal {
     pub fn init(&mut self, enabled: bool, rng_seed: u32) {
         self.enabled = enabled;
         self.hovered = false;
-        self.rng_state = if rng_seed == 0 {
-            0x9e37_79b9
-        } else {
-            rng_seed
-        };
+        self.rng = SmallRng::seed_from_u64(u64::from(rng_seed));
 
         if enabled {
-            self.instance_id = 10000 + (self.next_u32() % 90000);
-            self.player_count = 56 + (self.next_u32() % 19);
+            self.instance_id = self.rng.random_range(10_000..=99_999);
+            self.player_count = self.rng.random_range(56..=74);
             self.elapsed = 0.0;
             self.scale.pos = 0.04;
             self.scale.vel = 0.0;
@@ -170,26 +160,25 @@ impl Portal {
         }
     }
 
-    pub fn hit_test(&self, x: f32, y: f32) -> bool {
+    pub fn hit_test(&self, pt: Vec2) -> bool {
         if !self.enabled {
             return false;
         }
-        let rx = self.portal_buf[2];
-        let ry = self.portal_buf[3];
-        if rx <= 1.0 || ry <= 1.0 {
+        let radii = Vec2::new(self.portal_buf[2], self.portal_buf[3]);
+        if radii.x <= 1.0 || radii.y <= 1.0 {
             return false;
         }
-        let dx = (x - self.portal_buf[0]) / rx;
-        let dy = (y - self.portal_buf[1]) / ry;
-        (dx * dx + dy * dy) <= 1.0
+        let center = Vec2::new(self.portal_buf[0], self.portal_buf[1]);
+        let q = (pt - center) / radii;
+        q.length_squared() <= 1.0
     }
 
     pub fn clear_hover(&mut self) {
         self.hovered = false;
     }
 
-    pub fn click(&mut self, x: f32, y: f32) -> bool {
-        self.hit_test(x, y)
+    pub fn click(&mut self, pt: Vec2) -> bool {
+        self.hit_test(pt)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -198,10 +187,8 @@ impl Portal {
         safe_dt: f32,
         motion_scale: f32,
         time: f32,
-        width: f32,
-        height: f32,
-        mouse_x: f32,
-        mouse_y: f32,
+        size: Vec2,
+        mouse: Vec2,
         pointer_active: bool,
         grid_cam: &GridCamera,
     ) {
@@ -219,7 +206,6 @@ impl Portal {
             self.scale.step(safe_dt, 145.0, 17.5);
         }
 
-        // Compact 3D XZ ring expanding slightly past the rim and fading fast
         for i in 0..MAX_RINGS {
             let base = i * 2;
             let age = self.ring_ages[i];
@@ -249,30 +235,22 @@ impl Portal {
             }
         }
 
-        let w = width.max(1.0);
-        let (portal_cx, portal_cy, proj) = grid_cam.project_world_point(
-            0.0,
-            PORTAL_CENTER_Y,
-            PORTAL_Z,
-            w,
-            height,
-        );
+        let safe_size = size.max(Vec2::ONE);
+        let world_center = Vec3::new(0.0, PORTAL_CENTER_Y, PORTAL_Z);
+        let (portal_center, proj) =
+            grid_cam.project_world_point(world_center, safe_size);
 
         let scale = self.scale.pos.clamp(0.0, 1.15);
-        let mut base_rx = PORTAL_HALF_W * proj;
-        let max_rx = w * (0.25 * PORTAL_SCALE);
-        if base_rx > max_rx {
-            base_rx = max_rx;
-        }
+        let max_rx = safe_size.x * (0.25 * PORTAL_SCALE);
+        let base_rx = (PORTAL_HALF_W * proj).min(max_rx);
         let base_ry = base_rx * (PORTAL_HALF_H / PORTAL_HALF_W);
+        let base_radii = Vec2::new(base_rx, base_ry);
+        let portal_radii = base_radii * scale;
 
-        let portal_rx = base_rx * scale;
-        let portal_ry = base_ry * scale;
-
-        self.portal_buf[0] = portal_cx;
-        self.portal_buf[1] = portal_cy;
-        self.portal_buf[2] = portal_rx;
-        self.portal_buf[3] = portal_ry;
+        self.portal_buf[0] = portal_center.x;
+        self.portal_buf[1] = portal_center.y;
+        self.portal_buf[2] = portal_radii.x;
+        self.portal_buf[3] = portal_radii.y;
 
         self.portal_buf[4] = 0.0;
         self.portal_buf[5] = PORTAL_Z;
@@ -285,7 +263,7 @@ impl Portal {
         self.portal_buf[11] = 0.0;
 
         if pointer_active {
-            self.hovered = self.hit_test(mouse_x, mouse_y);
+            self.hovered = self.hit_test(mouse);
         } else {
             self.hovered = false;
         }
@@ -308,15 +286,9 @@ impl Portal {
                 self.particles[i] = p;
             }
 
-            let (sa, ca) = p.angle.sin_cos();
-            let sx = portal_cx + ca * p.dist * base_rx;
-            let sy = portal_cy + sa * p.dist * base_ry;
-
-            let vx_p = -ca * base_rx;
-            let vy_p = -sa * base_ry;
-            let v_len = (vx_p * vx_p + vy_p * vy_p).sqrt().max(1e-4);
-            let dir_x = vx_p / v_len;
-            let dir_y = vy_p / v_len;
+            let radial = Vec2::from_angle(p.angle) * base_radii;
+            let pos = portal_center + radial * p.dist;
+            let dir = (-radial).normalize_or_zero();
 
             let fade_in = ((1.82 - p.dist) / 0.44).clamp(0.0, 1.0);
             let fade_out = ((p.dist - 0.06) / 0.30).clamp(0.0, 1.0);
@@ -337,10 +309,10 @@ impl Portal {
             };
 
             let base = i * PARTICLE_FLOATS;
-            self.particle_buf[base] = sx;
-            self.particle_buf[base + 1] = sy;
-            self.particle_buf[base + 2] = dir_x;
-            self.particle_buf[base + 3] = dir_y;
+            self.particle_buf[base] = pos.x;
+            self.particle_buf[base + 1] = pos.y;
+            self.particle_buf[base + 2] = dir.x;
+            self.particle_buf[base + 3] = dir.y;
             self.particle_buf[base + 4] = p.size * PORTAL_SCALE;
             self.particle_buf[base + 5] = stretch;
             self.particle_buf[base + 6] = alpha;
@@ -352,9 +324,9 @@ impl Portal {
         self.hovered
     }
 
-    pub fn hovered_floor_anchor(&self) -> Option<(f32, f32)> {
+    pub fn hovered_floor_anchor(&self) -> Option<Vec2> {
         if self.enabled && self.hovered {
-            Some((0.0, PORTAL_Z))
+            Some(Vec2::new(0.0, PORTAL_Z))
         } else {
             None
         }

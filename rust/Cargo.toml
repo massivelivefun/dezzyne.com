@@ -6,6 +6,10 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib"]
 
+[dependencies]
+glam = { version = "0.33", default-features = false, features = ["std"] }
+rand = { version = "0.10", default-features = false }
+
 [profile.release]
 opt-level = "z"
 lto = true
