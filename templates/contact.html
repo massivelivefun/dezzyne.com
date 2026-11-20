@@ -1,42 +1,87 @@
 {% extends "base.html" %}
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 {% block content %}
-{%- if lang == config.default_language %}{% set lang_prefix = "" %}{% else %}{% set lang_prefix = "/" ~ lang %}{% endif %}
-<div class="contact-wrap">
-  <h1>{{ page.title }}</h1>
+{%- if lang == config.default_language %}
+  {%- set lang_prefix = "" %}
+{%- else %}
+  {%- set lang_prefix = "/" ~ lang %}
+{%- endif %}
+<h1 class="page-title">{{ page.title }}</h1>
+<div class="contact-body">
   <p class="contact-intro">{{ trans(key="contact_intro", lang=lang) }}</p>
 
-  <form class="contact-form" name="contact" method="POST" action="{{ lang_prefix }}/thanks" data-netlify="true" netlify-honeypot="bot-field">
+  <form
+    class="contact-form"
+    name="contact"
+    method="POST"
+    action="{{ lang_prefix }}/thanks"
+    accept-charset="utf-8"
+    data-netlify="true"
+    netlify-honeypot="bot-field">
     <input type="hidden" name="form-name" value="contact">
-    <input type="hidden" name="subject" data-remove-prefix value="Dezzyne Contact Form (%{submissionId})">
+    <input
+      type="hidden"
+      name="subject"
+      data-remove-prefix
+      value="Dezzyne Contact Form (%{submissionId})">
 
     <div class="honeypot" aria-hidden="true">
-      <label>{{ trans(key="form_honeypot", lang=lang) }} <input name="bot-field" tabindex="-1" autocomplete="off"></label>
+      <label>
+        {{ trans(key="form_honeypot", lang=lang) }}
+        <input name="bot-field" tabindex="-1" autocomplete="off">
+      </label>
     </div>
 
     <div class="form-row">
       <div class="form-field">
         <label for="name">{{ trans(key="form_name", lang=lang) }}</label>
-        <input type="text" id="name" name="name" autocomplete="name" maxlength="120" required>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          autocomplete="name"
+          minlength="2"
+          maxlength="120"
+          required>
       </div>
       <div class="form-field">
         <label for="email">{{ trans(key="form_email", lang=lang) }}</label>
-        <input type="email" id="email" name="email" autocomplete="email" maxlength="254" required>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          autocomplete="email"
+          maxlength="254"
+          required>
       </div>
     </div>
 
     <div class="form-field">
       <label for="topic">{{ trans(key="form_subject", lang=lang) }}</label>
-      <input type="text" id="topic" name="topic" maxlength="200" required>
+      <input
+        type="text"
+        id="topic"
+        name="topic"
+        minlength="2"
+        maxlength="200"
+        required>
     </div>
 
     <div class="form-field">
       <label for="message">{{ trans(key="form_message", lang=lang) }}</label>
-      <textarea id="message" name="message" rows="6" maxlength="5000" required></textarea>
+      <textarea
+        id="message"
+        name="message"
+        rows="6"
+        minlength="10"
+        maxlength="5000"
+        required></textarea>
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="btn-submit">{{ trans(key="form_send", lang=lang) }}</button>
+      <button type="submit" class="btn-submit">
+        {{- trans(key="form_send", lang=lang) -}}
+      </button>
     </div>
   </form>
 </div>
