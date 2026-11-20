@@ -68,24 +68,36 @@ impl GridCamera {
     ) {
         let w = width.max(1.0);
         let h = height.max(1.0);
+        let mobile_mix = ((900.0 - w) / 300.0).clamp(0.0, 1.0);
 
-        let idle_sway_x = (time * 0.32).sin() * 0.05 * motion_scale;
-        let idle_sway_y = (time * 0.23).cos() * 0.025 * motion_scale;
+        let sway_amp_x = 0.06 + mobile_mix * 0.42;
+        let sway_amp_y = 0.025 + mobile_mix * 0.035;
+        let sway_freq = 0.32 + mobile_mix * 0.16;
+
+        let primary_x = (time * sway_freq).sin();
+        let harmonic_x = (time * sway_freq * 0.53 + 1.1).sin() * 0.20;
+        let idle_sway_x =
+            (primary_x + harmonic_x) * (sway_amp_x / 1.20) * motion_scale;
+        let idle_sway_y = (time * 0.26).cos() * sway_amp_y * motion_scale;
 
         let (nx, ny) = if pointer_active {
             (
-                ((mouse_x / w) - 0.5) * 2.0,
-                ((mouse_y / h) - 0.5) * 2.0,
+                (((mouse_x / w) - 0.5) * 2.0).clamp(-1.0, 1.0),
+                (((mouse_y / h) - 0.5) * 2.0).clamp(-1.0, 1.0),
             )
         } else {
             (idle_sway_x, idle_sway_y)
         };
 
-        self.cam_x.target = nx * 0.52;
+        let dolly_x = 0.52 + mobile_mix * 0.48;
+        let yaw_gain = 0.082 - mobile_mix * 0.140;
+        let roll_gain = 0.018 + mobile_mix * 0.008;
+
+        self.cam_x.target = nx * dolly_x;
         self.cam_y.target = -ny * 0.20;
-        self.cam_yaw.target = nx * 0.082;
+        self.cam_yaw.target = nx * yaw_gain;
         self.cam_pitch.target = -0.14 - ny * 0.052;
-        self.cam_roll.target = -nx * 0.018;
+        self.cam_roll.target = -nx * roll_gain;
 
         if snap {
             self.cam_x.snap(self.cam_x.target);
@@ -97,12 +109,18 @@ impl GridCamera {
             self.has_floor_pos = false;
             self.anchor_blend.snap(0.0);
             self.cursor_glow.snap(0.0);
+        } else if pointer_active {
+            self.cam_x.step(safe_dt, 62.0, 15.7);
+            self.cam_y.step(safe_dt, 62.0, 15.7);
+            self.cam_yaw.step(safe_dt, 58.0, 15.2);
+            self.cam_pitch.step(safe_dt, 58.0, 15.2);
+            self.cam_roll.step(safe_dt, 52.0, 14.4);
         } else {
-            self.cam_x.step(safe_dt, 62.0, 15.0);
-            self.cam_y.step(safe_dt, 62.0, 15.0);
-            self.cam_yaw.step(safe_dt, 58.0, 14.5);
-            self.cam_pitch.step(safe_dt, 58.0, 14.5);
-            self.cam_roll.step(safe_dt, 52.0, 14.0);
+            self.cam_x.step(safe_dt, 24.0, 9.8);
+            self.cam_y.step(safe_dt, 24.0, 9.8);
+            self.cam_yaw.step(safe_dt, 22.0, 9.4);
+            self.cam_pitch.step(safe_dt, 22.0, 9.4);
+            self.cam_roll.step(safe_dt, 20.0, 8.9);
         }
 
         let travel = safe_dt * 0.85 * motion_scale;
