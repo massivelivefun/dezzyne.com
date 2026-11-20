@@ -1,5 +1,3 @@
 +++
 title = "Dezzyne"
 +++
-
-Startseite (Platzhalter).

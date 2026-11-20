@@ -1,5 +1,5 @@
 +++
-title = "Expériences de Contenu Généré par les Utilisateurs"
+title = "UGCE"
 sort_by = "weight"
 template = "ugce.html"
 page_template = "ugce_page.html"

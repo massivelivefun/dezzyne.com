@@ -1,5 +1,5 @@
 +++
-title = "ユーザー生成コンテンツ体験"
+title = "UGCE"
 sort_by = "weight"
 template = "ugce.html"
 page_template = "ugce_page.html"
