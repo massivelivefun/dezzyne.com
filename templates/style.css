@@ -155,7 +155,8 @@ a {
 }
 
 .site-main a,
-.site-main button {
+.site-main button,
+.not-found {
   pointer-events: auto;
 }
 
@@ -271,6 +272,7 @@ a {
   width: 100%;
   margin-top: auto;
   margin-bottom: auto;
+  pointer-events: auto;
 }
 
 .about-headline {

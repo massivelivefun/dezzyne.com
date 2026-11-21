@@ -26,7 +26,7 @@
     Content-Security-Policy = """\
       default-src 'none'; \
       script-src 'self' 'wasm-unsafe-eval'; \
-      style-src 'sha256-AOew3Pq/hsaNDoPRapKhaqOoWSpQGkbbket3bt8syf0='; \
+      style-src 'sha256-/DtvSXDFRdBCelrXBoFhOYqcHmlA9ziOdszOGSqH4AU='; \
       img-src 'self'; \
       connect-src 'self'; \
       base-uri 'none'; \
