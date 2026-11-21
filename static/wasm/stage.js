@@ -1636,6 +1636,9 @@ function initializeStage() {
     );
 
     let activeTouchPointerId = null;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isTouchDragging = false;
 
     function sendPointerMove(pointerX, pointerY) {
         pendingPointerPosition = [pointerX, pointerY];
@@ -1656,8 +1659,10 @@ function initializeStage() {
         if (activeTouchPointerId !== pointerId) {
             return;
         }
+        const wasDragging = isTouchDragging;
         activeTouchPointerId = null;
-        if (isStopped) {
+        isTouchDragging = false;
+        if (isStopped || !wasDragging) {
             return;
         }
         sendPointerLeave();
@@ -1690,14 +1695,12 @@ function initializeStage() {
                 return;
             }
             activeTouchPointerId = pointerEvent.pointerId;
+            touchStartX = pointerEvent.clientX;
+            touchStartY = pointerEvent.clientY;
+            isTouchDragging = false;
             try {
                 stage.setPointerCapture(pointerEvent.pointerId);
             } catch {}
-            const containerBounds = stageContainer.getBoundingClientRect();
-            sendPointerMove(
-                pointerEvent.clientX - containerBounds.left,
-                pointerEvent.clientY - containerBounds.top
-            );
         },
         { passive: true, signal: abortSignal }
     );
@@ -1714,11 +1717,18 @@ function initializeStage() {
             ) {
                 return;
             }
-            if (
-                pointerEvent.pointerType === "touch" &&
-                pointerEvent.pointerId !== activeTouchPointerId
-            ) {
+            const isTouch = pointerEvent.pointerType === "touch";
+            if (isTouch && pointerEvent.pointerId !== activeTouchPointerId) {
                 return;
+            }
+            const deltaX = pointerEvent.clientX - touchStartX;
+            const deltaY = pointerEvent.clientY - touchStartY;
+            const movedDistanceSquared = deltaX * deltaX + deltaY * deltaY;
+            if (isTouch && !isTouchDragging && movedDistanceSquared < 36) {
+                return;
+            }
+            if (isTouch) {
+                isTouchDragging = true;
             }
             const containerBounds = stageContainer.getBoundingClientRect();
             sendPointerMove(

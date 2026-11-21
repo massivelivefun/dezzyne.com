@@ -33,6 +33,7 @@ pub struct GridCamera {
     anchor_blend: Spring,
     cursor_glow: Spring,
     scroll_offset_z: f32,
+    release_hold_seconds: f32,
     camera_buffer: [f32; CAMERA_FLOATS],
 }
 
@@ -55,6 +56,7 @@ impl GridCamera {
             anchor_blend: Spring::new(0.0),
             cursor_glow: Spring::new(0.0),
             scroll_offset_z: 0.0,
+            release_hold_seconds: 0.0,
             camera_buffer: [0.0; CAMERA_FLOATS],
         }
     }
@@ -68,11 +70,51 @@ impl GridCamera {
         (rotation * Vec3::X, rotation * Vec3::Y, rotation * Vec3::Z)
     }
 
+    fn update_camera_targets(
+        &mut self,
+        delta_seconds: f32,
+        safe_viewport: Vec2,
+        pointer_position: Vec2,
+        pointer_active: bool,
+        narrowness: f32,
+    ) {
+        if pointer_active {
+            self.release_hold_seconds = narrowness * 0.50;
+            let normalized_pointer = (((pointer_position / safe_viewport)
+                - Vec2::splat(0.5))
+                * 2.0)
+                .clamp(Vec2::NEG_ONE, Vec2::ONE);
+            let horizontal_pan_range = 0.52 + narrowness * 1.78;
+            let yaw_range = 0.082 + narrowness * 0.178;
+
+            self.camera_position_x.target =
+                normalized_pointer.x * horizontal_pan_range;
+            self.camera_position_y.target = -normalized_pointer.y * 0.20;
+            self.camera_yaw.target = normalized_pointer.x * yaw_range;
+            self.camera_pitch.target = -0.14 - normalized_pointer.y * 0.052;
+            self.camera_roll.target = -normalized_pointer.x * 0.018;
+            return;
+        }
+
+        if self.release_hold_seconds > 0.0 {
+            self.release_hold_seconds =
+                (self.release_hold_seconds - delta_seconds).max(0.0);
+            return;
+        }
+
+        self.camera_position_x.target = 0.0;
+        self.camera_position_y.target = 0.0;
+        self.camera_yaw.target = 0.0;
+        self.camera_pitch.target = -0.14;
+        self.camera_roll.target = 0.0;
+    }
+
     fn apply_camera_springs(
         &mut self,
         delta_seconds: f32,
         pointer_active: bool,
         should_snap: bool,
+        narrowness: f32,
     ) {
         if should_snap {
             self.camera_position_x.snap(self.camera_position_x.target);
@@ -80,13 +122,14 @@ impl GridCamera {
             self.camera_yaw.snap(self.camera_yaw.target);
             self.camera_pitch.snap(self.camera_pitch.target);
             self.camera_roll.snap(self.camera_roll.target);
+            self.release_hold_seconds = 0.0;
             self.light_state = LightState::Hidden;
             self.has_floor_position = false;
             self.anchor_blend.snap(0.0);
             self.cursor_glow.snap(0.0);
             return;
         }
-        if pointer_active {
+        if pointer_active || self.release_hold_seconds > 0.0 {
             self.camera_position_x.step(delta_seconds, 62.0, 15.7);
             self.camera_position_y.step(delta_seconds, 62.0, 15.7);
             self.camera_yaw.step(delta_seconds, 58.0, 15.2);
@@ -94,11 +137,24 @@ impl GridCamera {
             self.camera_roll.step(delta_seconds, 52.0, 14.4);
             return;
         }
-        self.camera_position_x.step(delta_seconds, 24.0, 9.8);
-        self.camera_position_y.step(delta_seconds, 24.0, 9.8);
-        self.camera_yaw.step(delta_seconds, 22.0, 9.4);
-        self.camera_pitch.step(delta_seconds, 22.0, 9.4);
-        self.camera_roll.step(delta_seconds, 20.0, 8.9);
+
+        let pos_stiffness = 24.0 - narrowness * 21.8;
+        let pos_damping = 9.8 - narrowness * 6.6;
+        let rot_stiffness = 22.0 - narrowness * 20.0;
+        let rot_damping = 9.4 - narrowness * 6.3;
+        let roll_stiffness = 20.0 - narrowness * 18.2;
+        let roll_damping = 8.9 - narrowness * 6.0;
+
+        self.camera_position_x
+            .step(delta_seconds, pos_stiffness, pos_damping);
+        self.camera_position_y
+            .step(delta_seconds, pos_stiffness, pos_damping);
+        self.camera_yaw
+            .step(delta_seconds, rot_stiffness, rot_damping);
+        self.camera_pitch
+            .step(delta_seconds, rot_stiffness, rot_damping);
+        self.camera_roll
+            .step(delta_seconds, roll_stiffness, roll_damping);
     }
 
     pub fn step_camera(
@@ -111,21 +167,22 @@ impl GridCamera {
         should_snap: bool,
     ) {
         let safe_viewport = viewport_size.max(Vec2::ONE);
+        let aspect_ratio = safe_viewport.x / safe_viewport.y;
+        let narrowness = ((1.35 - aspect_ratio) / 0.85).clamp(0.0, 1.0);
 
-        let normalized_pointer = if pointer_active {
-            (((pointer_position / safe_viewport) - Vec2::splat(0.5)) * 2.0)
-                .clamp(Vec2::NEG_ONE, Vec2::ONE)
-        } else {
-            Vec2::ZERO
-        };
-
-        self.camera_position_x.target = normalized_pointer.x * 0.52;
-        self.camera_position_y.target = -normalized_pointer.y * 0.20;
-        self.camera_yaw.target = normalized_pointer.x * 0.082;
-        self.camera_pitch.target = -0.14 - normalized_pointer.y * 0.052;
-        self.camera_roll.target = -normalized_pointer.x * 0.018;
-
-        self.apply_camera_springs(delta_seconds, pointer_active, should_snap);
+        self.update_camera_targets(
+            delta_seconds,
+            safe_viewport,
+            pointer_position,
+            pointer_active,
+            narrowness,
+        );
+        self.apply_camera_springs(
+            delta_seconds,
+            pointer_active,
+            should_snap,
+            narrowness,
+        );
 
         let travel_distance = delta_seconds * 0.85 * motion_scale;
         let next_scroll = self.scroll_offset_z + travel_distance;
