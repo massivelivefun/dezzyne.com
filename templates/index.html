@@ -1,5 +1,17 @@
 {% extends "base.html" %}
+{% block head_preload %}
+    <link rel="modulepreload" href="/wasm/keypad.js">
+{%- endblock head_preload %}
 {% block title %}{{ config.title }}{% endblock title %}
+{% block stage_attributes -%}
+  {%- if lang == config.default_language -%}
+    {%- set language_prefix = "" -%}
+  {%- else -%}
+    {%- set language_prefix = "/" ~ lang -%}
+  {%- endif %}
+        data-scene="keypad"
+        data-target-href="{{ language_prefix }}/about/"
+{%- endblock stage_attributes %}
 {% block content %}
 <h1 class="page-title page-title--home">{{ section.title }}</h1>
 {{ section.content | safe }}

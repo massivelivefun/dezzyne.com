@@ -1,33 +1,33 @@
 #[derive(Clone, Copy)]
 pub struct Spring {
-    pub pos: f32,
-    pub vel: f32,
+    pub position: f32,
+    pub velocity: f32,
     pub target: f32,
 }
 
 impl Spring {
-    pub const fn new(val: f32) -> Self {
+    pub const fn new(initial_value: f32) -> Self {
         Self {
-            pos: val,
-            vel: 0.0,
-            target: val,
+            position: initial_value,
+            velocity: 0.0,
+            target: initial_value,
         }
     }
 
-    pub fn snap(&mut self, val: f32) {
-        self.pos = val;
-        self.vel = 0.0;
-        self.target = val;
+    pub fn snap(&mut self, target_value: f32) {
+        self.position = target_value;
+        self.velocity = 0.0;
+        self.target = target_value;
     }
 
-    pub fn step(&mut self, dt: f32, stiffness: f32, damping: f32) {
-        let clamped_dt = dt.clamp(0.0, 0.05);
-        let sub_dt = clamped_dt * 0.5;
+    pub fn step(&mut self, delta_seconds: f32, stiffness: f32, damping: f32) {
+        let clamped_delta = delta_seconds.clamp(0.0, 0.05);
+        let substep_delta = clamped_delta * 0.5;
         for _ in 0..2 {
-            let delta = self.target - self.pos;
-            let force = delta * stiffness - self.vel * damping;
-            self.vel += force * sub_dt;
-            self.pos += self.vel * sub_dt;
+            let displacement = self.target - self.position;
+            let force = displacement * stiffness - self.velocity * damping;
+            self.velocity += force * substep_delta;
+            self.position += self.velocity * substep_delta;
         }
     }
 }

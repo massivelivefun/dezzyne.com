@@ -97,11 +97,11 @@ a {
   overflow-x: clip;
 }
 
-.site-stage--portal-hover {
+.site-stage--interactive-hover {
   cursor: pointer;
 }
 
-.wasm-canvas {
+.stage {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -114,14 +114,16 @@ a {
   user-select: none;
   z-index: 0;
   opacity: 0;
-  transition: opacity 0.2s ease;
 }
 
-.wasm-canvas--ready {
+.stage--ready {
   opacity: 1;
 }
 
 .site-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   position: relative;
   z-index: 2;
   margin-top: 0;
@@ -149,6 +151,8 @@ a {
 
 @media (min-width: 769px) {
   .site-main {
+    flex: 0 0 auto;
+    display: block;
     position: static;
     margin-top: auto;
     margin-bottom: auto;
@@ -241,6 +245,7 @@ a {
 .honeypot {
   display: none;
 }
+
 
 .contact-body {
   width: 100%;

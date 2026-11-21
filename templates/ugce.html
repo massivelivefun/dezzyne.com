@@ -1,15 +1,20 @@
 {% extends "base.html" %}
+{% block head_preload %}
+    <link rel="modulepreload" href="/wasm/portals.js">
+{%- endblock head_preload %}
 {% block title %}{{ section.title }} | {{ config.title }}{% endblock title %}
-{% block wasm_attrs %} data-portal="1"{% endblock wasm_attrs %}
+{% block stage_attributes %}
+        data-scene="portals"
+{%- endblock stage_attributes %}
 {% block content %}
 <h1 class="page-title">{{ section.title }}</h1>
 {%- if section.pages | length > 0 %}
-  {%- set grouped = section.pages | group_by(attribute="extra.group") %}
-  {%- for platform, items in grouped %}
+  {%- set grouped_pages = section.pages | group_by(attribute="extra.group") %}
+  {%- for platform, experiences in grouped_pages %}
 <h2>{{ platform }}</h2>
 <ul>
-    {%- for item in items %}
-  <li><a href="{{ item.path }}">{{ item.title }}</a></li>
+    {%- for experience in experiences %}
+  <li><a href="{{ experience.path }}">{{ experience.title }}</a></li>
     {%- endfor %}
 </ul>
   {%- endfor %}

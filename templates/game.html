@@ -2,12 +2,12 @@
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 {% block content %}
 {%- if lang == config.default_language %}
-  {%- set lang_prefix = "" %}
+  {%- set language_prefix = "" %}
 {%- else %}
-  {%- set lang_prefix = "/" ~ lang %}
+  {%- set language_prefix = "/" ~ lang %}
 {%- endif %}
 <p>
-  <a href="{{ lang_prefix }}/games/">
+  <a href="{{ language_prefix }}/games/">
     &larr; {{ trans(key="back_all_games", lang=lang) }}
   </a>
 </p>

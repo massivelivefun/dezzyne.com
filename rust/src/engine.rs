@@ -3,75 +3,109 @@ use std::cell::RefCell;
 use glam::Vec2;
 
 use crate::grid::GridCamera;
-use crate::portal::Portal;
+use crate::keypad::KeypadProp;
+use crate::portal::PortalGroup;
+
+pub const SCENE_PORTALS: u32 = 1;
+pub const SCENE_KEYPAD: u32 = 2;
 
 pub struct Engine {
-    size: Vec2,
-    mouse: Vec2,
+    viewport_size: Vec2,
+    pointer_position: Vec2,
     pointer_active: bool,
-    time: f32,
+    elapsed_seconds: f32,
     quality_tier: u32,
-    slow_frame_accum: f32,
-    pub grid: GridCamera,
-    pub portal: Portal,
+    slow_frame_seconds: f32,
+    pub grid_camera: GridCamera,
+    pub portal_group: PortalGroup,
+    pub keypad_prop: KeypadProp,
 }
 
 thread_local! {
     static ENGINE: RefCell<Engine> = RefCell::new(Engine::new());
 }
 
-pub fn with_engine<R>(f: impl FnOnce(&Engine) -> R) -> R {
-    ENGINE.with(|cell| f(&cell.borrow()))
+pub fn with_engine<R>(callback: impl FnOnce(&Engine) -> R) -> R {
+    ENGINE.with(|cell| callback(&cell.borrow()))
 }
 
-pub fn with_engine_mut<R>(f: impl FnOnce(&mut Engine) -> R) -> R {
-    ENGINE.with(|cell| f(&mut cell.borrow_mut()))
+pub fn with_engine_mut<R>(callback: impl FnOnce(&mut Engine) -> R) -> R {
+    ENGINE.with(|cell| callback(&mut cell.borrow_mut()))
 }
 
 impl Engine {
     pub fn new() -> Self {
         Self {
-            size: Vec2::new(1280.0, 720.0),
-            mouse: Vec2::splat(-9999.0),
+            viewport_size: Vec2::new(1280.0, 720.0),
+            pointer_position: Vec2::splat(-9999.0),
             pointer_active: false,
-            time: 0.0,
+            elapsed_seconds: 0.0,
             quality_tier: 0,
-            slow_frame_accum: 0.0,
-            grid: GridCamera::new(),
-            portal: Portal::new(),
+            slow_frame_seconds: 0.0,
+            grid_camera: GridCamera::new(),
+            portal_group: PortalGroup::new(),
+            keypad_prop: KeypadProp::new(),
         }
     }
 
-    pub fn init(
+    pub fn initialize(
         &mut self,
         width: f32,
         height: f32,
-        portal_enabled: u32,
-        rng_seed: u32,
+        scene_mode: u32,
+        random_seed: u32,
     ) {
-        let w = if width.is_finite() {
+        let clamped_width = if width.is_finite() {
             width.clamp(1.0, 16384.0)
         } else {
             1280.0
         };
-        let h = if height.is_finite() {
+        let clamped_height = if height.is_finite() {
             height.clamp(1.0, 16384.0)
         } else {
             720.0
         };
-        self.size = Vec2::new(w, h);
+        self.viewport_size = Vec2::new(clamped_width, clamped_height);
         self.pointer_active = false;
         self.quality_tier = 0;
-        self.slow_frame_accum = 0.0;
+        self.slow_frame_seconds = 0.0;
 
-        self.portal.init(portal_enabled != 0, rng_seed);
-        self.grid
-            .step_camera(0.016, 1.0, self.size, self.mouse, false, true);
-        self.portal.step(
-            0.0, 1.0, self.time, self.size, self.mouse, false, &self.grid,
+        self.portal_group
+            .initialize_ugce_trio(scene_mode == SCENE_PORTALS, random_seed);
+        self.keypad_prop.initialize(scene_mode == SCENE_KEYPAD);
+
+        self.grid_camera.step_camera(
+            0.016,
+            1.0,
+            self.viewport_size,
+            self.pointer_position,
+            false,
+            true,
         );
-        self.grid.step_cursor_light(
-            0.016, self.size, self.mouse, false, None, true,
+        self.portal_group.step(
+            0.0,
+            1.0,
+            self.elapsed_seconds,
+            self.viewport_size,
+            self.pointer_position,
+            false,
+            &self.grid_camera,
+        );
+        self.keypad_prop.step(
+            0.0,
+            1.0,
+            self.viewport_size,
+            self.pointer_position,
+            false,
+            &self.grid_camera,
+        );
+        self.grid_camera.step_cursor_light(
+            0.016,
+            self.viewport_size,
+            self.pointer_position,
+            false,
+            None,
+            true,
         );
     }
 
@@ -79,81 +113,126 @@ impl Engine {
         if !width.is_finite() || !height.is_finite() {
             return;
         }
-        self.size =
+        self.viewport_size =
             Vec2::new(width.clamp(1.0, 16384.0), height.clamp(1.0, 16384.0));
     }
 
-    pub fn pointer_move(&mut self, x: f32, y: f32) {
-        if !x.is_finite() || !y.is_finite() {
+    pub fn pointer_move(&mut self, pointer_x: f32, pointer_y: f32) {
+        if !pointer_x.is_finite() || !pointer_y.is_finite() {
             return;
         }
-        self.mouse =
-            Vec2::new(x.clamp(-16384.0, 32768.0), y.clamp(-16384.0, 32768.0));
+        self.pointer_position = Vec2::new(
+            pointer_x.clamp(-16384.0, 32768.0),
+            pointer_y.clamp(-16384.0, 32768.0),
+        );
         self.pointer_active = true;
     }
 
     pub fn pointer_leave(&mut self) {
         self.pointer_active = false;
-        self.portal.clear_hover();
+        self.portal_group.clear_hover();
+        self.keypad_prop.clear_hover();
     }
 
-    pub fn click_portal(&mut self, x: f32, y: f32) -> u32 {
-        if !x.is_finite() || !y.is_finite() {
+    pub fn click_stage(&mut self, pointer_x: f32, pointer_y: f32) -> i32 {
+        if !pointer_x.is_finite() || !pointer_y.is_finite() {
+            return -1;
+        }
+        let pointer_point = Vec2::new(pointer_x, pointer_y);
+        if let Some(portal_index) = self.portal_group.click(pointer_point) {
+            return portal_index as i32;
+        }
+        let hit_keypad = self.keypad_prop.click(
+            pointer_point,
+            self.viewport_size,
+            &self.grid_camera,
+        );
+        if hit_keypad {
             return 0;
         }
-        if self.portal.click(Vec2::new(x, y)) {
-            1
-        } else {
-            0
+        -1
+    }
+
+    pub fn is_interactive_hovered(&self) -> bool {
+        self.portal_group.is_any_hovered() || self.keypad_prop.is_hovered()
+    }
+
+    fn update_quality_tier(&mut self, raw_delta: f32) {
+        if raw_delta <= 0.036 {
+            self.slow_frame_seconds =
+                (self.slow_frame_seconds - raw_delta * 0.5).max(0.0);
+            return;
+        }
+        if raw_delta <= 0.048 || raw_delta >= 0.095 {
+            return;
+        }
+        self.slow_frame_seconds += raw_delta;
+        if self.slow_frame_seconds > 1.5 && self.quality_tier == 0 {
+            self.quality_tier = 1;
+            self.slow_frame_seconds = 0.0;
         }
     }
 
-    pub fn step(&mut self, dt: f32, motion_scale: f32) -> u32 {
-        let raw_dt = if dt.is_finite() { dt } else { 0.016 };
-        let safe_dt = raw_dt.clamp(0.0001, 0.1);
-        let m_scale = if motion_scale.is_finite() {
+    pub fn step(
+        &mut self,
+        delta_seconds: f32,
+        motion_scale: f32,
+        entities_ready: bool,
+    ) -> u32 {
+        let raw_delta = if delta_seconds.is_finite() {
+            delta_seconds
+        } else {
+            0.016
+        };
+        let safe_delta = raw_delta.clamp(0.0001, 0.1);
+        let clamped_motion_scale = if motion_scale.is_finite() {
             motion_scale.clamp(0.0, 2.0)
         } else {
-            0.0
+            1.0
         };
-        self.time += safe_dt * m_scale;
+        self.elapsed_seconds =
+            (self.elapsed_seconds + safe_delta * clamped_motion_scale)
+                .rem_euclid(36000.0);
 
-        if raw_dt > 0.026 && raw_dt < 0.090 {
-            self.slow_frame_accum += raw_dt;
-            if self.slow_frame_accum > 1.2 && self.quality_tier == 0 {
-                self.quality_tier = 1;
-                self.slow_frame_accum = 0.0;
-            } else if self.slow_frame_accum > 1.8 && self.quality_tier == 1 {
-                self.quality_tier = 2;
-            }
-        } else if raw_dt <= 0.022 {
-            self.slow_frame_accum =
-                (self.slow_frame_accum - raw_dt * 0.5).max(0.0);
-        }
+        self.update_quality_tier(raw_delta);
 
-        self.grid.step_camera(
-            safe_dt,
-            m_scale,
-            self.size,
-            self.mouse,
+        self.grid_camera.step_camera(
+            safe_delta,
+            clamped_motion_scale,
+            self.viewport_size,
+            self.pointer_position,
             self.pointer_active,
             false,
         );
-        self.portal.step(
-            safe_dt,
-            m_scale,
-            self.time,
-            self.size,
-            self.mouse,
-            self.pointer_active,
-            &self.grid,
+
+        let entity_delta = if entities_ready { safe_delta } else { 0.0 };
+        self.portal_group.step(
+            entity_delta,
+            clamped_motion_scale,
+            self.elapsed_seconds,
+            self.viewport_size,
+            self.pointer_position,
+            self.pointer_active && entities_ready,
+            &self.grid_camera,
+        );
+        self.keypad_prop.step(
+            entity_delta,
+            clamped_motion_scale,
+            self.viewport_size,
+            self.pointer_position,
+            self.pointer_active && entities_ready,
+            &self.grid_camera,
         );
 
-        let hovered_anchor = self.portal.hovered_floor_anchor();
-        self.grid.step_cursor_light(
-            safe_dt,
-            self.size,
-            self.mouse,
+        let hovered_anchor = self
+            .portal_group
+            .hovered_floor_anchor()
+            .or_else(|| self.keypad_prop.hovered_floor_anchor());
+
+        self.grid_camera.step_cursor_light(
+            safe_delta,
+            self.viewport_size,
+            self.pointer_position,
             self.pointer_active,
             hovered_anchor,
             false,

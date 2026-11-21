@@ -9,6 +9,14 @@
     <meta name="darkreader-lock">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <style>{{ load_data(path="templates/style.css") | safe }}</style>
+    <link rel="modulepreload" href="/wasm/stage.js">
+    <link
+      rel="preload"
+      href="/wasm/dezzyne_bg.wasm"
+      as="fetch"
+      type="application/wasm"
+      crossorigin>
+    {%- block head_preload %}{% endblock head_preload %}
     <link rel="icon" href="/favicon.ico">
     {%- if page is defined %}
       {%- set page_translations = page.translations %}
@@ -17,34 +25,34 @@
     {%- else %}
       {%- set page_translations = [] %}
     {%- endif %}
-    {%- for t in page_translations %}
+    {%- for translation in page_translations %}
     <link
       rel="alternate"
-      hreflang="{{ t.lang }}"
-      href="{{ t.permalink | safe }}">
+      hreflang="{{ translation.lang }}"
+      href="{{ translation.permalink | safe }}">
     {%- endfor %}
     <title>{% block title %}{{ config.title }}{% endblock title %}</title>
   </head>
   <body>
     {%- if lang == config.default_language %}
-      {%- set lang_prefix = "" %}
+      {%- set language_prefix = "" %}
     {%- else %}
-      {%- set lang_prefix = "/" ~ lang %}
+      {%- set language_prefix = "/" ~ lang %}
     {%- endif %}
     <header class="site-header">
       <div class="container banner-inner">
-        <a href="{{ lang_prefix }}/" class="site-logo">Dezzyne</a>
+        <a href="{{ language_prefix }}/" class="site-logo">Dezzyne</a>
         <nav class="header-nav" aria-label="Main navigation">
-          <a href="{{ lang_prefix }}/about/">
+          <a href="{{ language_prefix }}/about/">
             {{- trans(key="nav_about", lang=lang) -}}
           </a>
-          <a href="{{ lang_prefix }}/games/">
+          <a href="{{ language_prefix }}/games/">
             {{- trans(key="nav_games", lang=lang) -}}
           </a>
-          <a href="{{ lang_prefix }}/ugce/">
+          <a href="{{ language_prefix }}/ugce/">
             {{- trans(key="nav_ugce", lang=lang) -}}
           </a>
-          <a href="{{ lang_prefix }}/contact/">
+          <a href="{{ language_prefix }}/contact/">
             {{- trans(key="nav_contact", lang=lang) -}}
           </a>
         </nav>
@@ -53,9 +61,9 @@
 
     <div class="site-stage">
       <canvas
-        id="wasm-canvas"
-        class="wasm-canvas"
-        {%- block wasm_attrs %}{% endblock wasm_attrs %}
+        id="stage"
+        class="stage"
+        {%- block stage_attributes %}{% endblock stage_attributes %}
         aria-hidden="true"></canvas>
       <main class="container site-main">
         {% block content %}{% endblock content %}

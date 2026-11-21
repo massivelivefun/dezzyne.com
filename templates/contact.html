@@ -2,9 +2,9 @@
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 {% block content %}
 {%- if lang == config.default_language %}
-  {%- set lang_prefix = "" %}
+  {%- set language_prefix = "" %}
 {%- else %}
-  {%- set lang_prefix = "/" ~ lang %}
+  {%- set language_prefix = "/" ~ lang %}
 {%- endif %}
 <h1 class="page-title">{{ page.title }}</h1>
 <div class="contact-body">
@@ -14,7 +14,7 @@
     class="contact-form"
     name="contact"
     method="POST"
-    action="{{ lang_prefix }}/thanks"
+    action="{{ language_prefix }}/thanks"
     accept-charset="utf-8"
     data-netlify="true"
     netlify-honeypot="bot-field">

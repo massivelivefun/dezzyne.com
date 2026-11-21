@@ -1,40 +1,39 @@
-// Hardened Rust WASM + WebGL2 3D perspective stage and UGCE VRChat portal.
-// Zero external imports, zero DOM/CSSOM string sinks, empty WASM imports,
-// bounds-checked memory views, and fallback to the #2b2b2b CSS background.
-
 const {
     ArrayBuffer,
     Float32Array,
     Math,
     Number,
     Object,
-    String,
     Uint8Array,
     Uint32Array,
     URL,
     WebAssembly,
 } = globalThis;
 
-const WASM_URL = "/wasm/dezzyne_bg.wasm";
-const MAX_WASM_BYTES = 65536;
-const MAX_CANVAS_DIM = 8192;
-const CAM_FLOATS = 20;
+const WASM_MODULE_URL = "/wasm/dezzyne_bg.wasm";
+const MAXIMUM_WASM_BYTES = 65536;
+const MAXIMUM_STAGE_DIMENSION = 8192;
+const CAMERA_FLOATS = 20;
+const KEYPAD_FLOATS = 16;
+const MAXIMUM_PORTALS = 4;
 const PORTAL_FLOATS = 12;
-const RING_FLOATS = 16;
+const RING_FLOATS_PER_PORTAL = 8;
 const PARTICLE_FLOATS = 8;
+const METADATA_U32S_PER_PORTAL = 4;
+const MAJOR_GRID_STEP = 4.0;
 
-const LABEL_TEX_W = 920;
-const LABEL_TEX_H = 428;
-const LABEL_FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+const SCENE_GRID = 0;
+const SCENE_PORTALS = 1;
+const SCENE_KEYPAD = 2;
 
-const FETCH_OPTS = Object.freeze({
+const WASM_FETCH_OPTIONS = Object.freeze({
     method: "GET",
     credentials: "same-origin",
-    mode: "same-origin",
+    mode: "cors",
     redirect: "error",
 });
 
-const GL_CTX_OPTS = Object.freeze({
+const WEBGL_CONTEXT_OPTIONS = Object.freeze({
     alpha: false,
     antialias: false,
     depth: false,
@@ -42,617 +41,73 @@ const GL_CTX_OPTS = Object.freeze({
     powerPreference: "high-performance",
 });
 
-const REQUIRED_FN_EXPORTS = Object.freeze([
-    "init_scene",
+const REQUIRED_FUNCTION_EXPORTS = Object.freeze([
+    "initialize_scene",
     "resize_scene",
     "pointer_move",
     "pointer_leave",
-    "click_portal",
-    "is_portal_hovered",
+    "click_stage",
+    "is_interactive_hovered",
     "step_scene",
-    "get_instance_id",
-    "get_player_count",
-    "get_countdown_sec",
-    "get_camera_ptr",
-    "get_portal_ptr",
-    "get_rings_ptr",
-    "get_particles_ptr",
+    "get_camera_pointer",
+    "get_keypad_pointer",
+    "get_portal_count",
+    "get_portals_pointer",
+    "get_rings_pointer",
+    "get_particles_pointer",
     "get_particle_count",
+    "get_portal_metadata_pointer",
 ]);
 
-const VERT_SRC = `#version 300 es
-in vec2 a_pos;
-void main() {
-    gl_Position = vec4(a_pos, 0.0, 1.0);
-}
-`;
-
-const FRAG_SRC = `#version 300 es
-precision highp float;
-
-uniform vec2 u_res;
-uniform float u_dpr;
-uniform vec4 u_cam[5];
-uniform vec4 u_portal[3];
-uniform vec4 u_rings[4];
-
-out vec4 outColor;
-
-vec2 gridAxis(vec2 coord, vec2 fw, float radiusPx) {
-    vec2 coverage = clamp(1.0 - fw * 1.15, 0.0, 1.0);
-    vec2 distPx = abs(fract(coord - 0.5) - 0.5) / max(fw, vec2(1e-4));
-    vec2 edge = smoothstep(radiusPx - 0.55, radiusPx + 0.55, distPx);
-    return (1.0 - edge) * coverage;
-}
-
-float hash21(vec2 p) {
-    vec2 q = fract(p * vec2(123.34, 456.21));
-    q += dot(q, q + 45.32);
-    return fract(q.x * q.y);
-}
-
-float vnoise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    float a = hash21(i);
-    float b = hash21(i + vec2(1.0, 0.0));
-    float c = hash21(i + vec2(0.0, 1.0));
-    float d = hash21(i + vec2(1.0, 1.0));
-    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
-}
-
-float fbm(vec2 p) {
-    float v = 0.0;
-    float amp = 0.5;
-    mat2 rot = mat2(0.8, -0.6, 0.6, 0.8);
-    for (int i = 0; i < 4; i++) {
-        v += amp * vnoise(p);
-        p = rot * p * 2.03 + vec2(1.7, 9.2);
-        amp *= 0.5;
-    }
-    return v;
-}
-
-float evalXzRing(float pDist, float ringR, float ringA) {
-    if (ringA <= 0.001) {
-        return 0.0;
-    }
-    float diff = abs(pDist - ringR);
-    float core = exp(-diff * diff * 34.0);
-    float halo = exp(-diff * diff * 5.5) * 0.45;
-    return (core + halo) * ringA;
-}
-
-void main() {
-    float px = gl_FragCoord.x / u_dpr;
-    float py = u_res.y - gl_FragCoord.y / u_dpr;
-    vec2 p = vec2(px, py);
-    float halfH = max(u_res.y * 0.5, 1.0);
-
-    float us = ((p.x - u_res.x * 0.5) / halfH) * u_cam[0].w;
-    float vs = ((u_res.y * 0.5 - p.y) / halfH) * u_cam[0].w;
-    vec3 camPos = u_cam[0].xyz;
-    vec3 rayDir = u_cam[1].xyz + us * u_cam[2].xyz + vs * u_cam[3].xyz;
-    vec3 d = normalize(rayDir);
-    float scrollZ = u_cam[1].w;
-
-    vec3 col = vec3(0.1686);
-    vec2 uv = (p / u_res) - 0.5;
-    col -= dot(uv, uv) * 0.032;
-    float horizonBand = exp(-abs(d.y) * 16.0);
-    col += vec3(0.022, 0.023, 0.025) * horizonBand;
-
-    float floorDenom = min(d.y, -0.012);
-    float tFloor = (u_cam[2].w - camPos.y) / floorDenom;
-    vec2 floorRawXZ = camPos.xz + d.xz * tFloor;
-    vec2 floorXZ = floorRawXZ + vec2(0.0, scrollZ);
-    vec2 floorFw = fwidth(floorXZ);
-
-    float floorMask = smoothstep(-0.014, -0.055, d.y);
-    float floorMinorVis = floorMask * exp(-tFloor * 0.095);
-    float floorMajorVis = floorMask * exp(-tFloor * 0.055);
-
-    col -= vec3(0.015) * floorMask * exp(-tFloor * 0.14);
-
-    vec2 fMinorXY = gridAxis(floorXZ, floorFw, 0.45);
-    vec2 fMajorXY = gridAxis(floorXZ * 0.25, floorFw * 0.25, 0.72);
-    float fMinor = max(fMinorXY.x, fMinorXY.y);
-    float fMajor = max(fMajorXY.x, fMajorXY.y);
-    float fCross = fMajorXY.x * fMajorXY.y;
-
-    float cursorDist = length(floorRawXZ - u_cam[4].xy);
-    float spotFalloff = exp(-cursorDist * cursorDist * 0.11);
-    float floorSpot = spotFalloff * u_cam[4].w * floorMask;
-
-    float floorLineLum = fMinor * 0.055 * floorMinorVis
-        + fMajor * 0.135 * floorMajorVis
-        + fCross * 0.075 * floorMajorVis
-        + max(fMinor, fMajor) * 0.19 * floorSpot
-        + 0.020 * floorSpot;
-    col += vec3(floorLineLum);
-
-    if (u_portal[1].z > 0.5) {
-        float pScale = max(u_portal[2].z, 0.1);
-        float pDist = length(floorRawXZ - u_portal[1].xy) / pScale;
-        float basePool = exp(-pDist * pDist * 0.52) * u_portal[2].y;
-        float floorGlow = basePool * floorMask;
-        col += vec3(0.04, 0.13, 0.28) * floorGlow;
-        col += vec3(0.16, 0.54, 1.00) * max(fMinor, fMajor) * floorGlow * 0.55;
-
-        float ringDenom = min(d.y, -0.006);
-        float tRing = (u_portal[1].w - camPos.y) / ringDenom;
-        vec2 ringXZ = camPos.xz + d.xz * tRing;
-        float ringVis = smoothstep(-0.008, -0.028, d.y);
-        float pRingDist = length(ringXZ - u_portal[1].xy) / pScale;
-
-        float ringSum = 0.0;
-        for (int i = 0; i < 4; i++) {
-            vec4 rv = u_rings[i];
-            ringSum += evalXzRing(pRingDist, rv.x / pScale, rv.y);
-            ringSum += evalXzRing(pRingDist, rv.z / pScale, rv.w);
-        }
-        float clampedRing = min(ringSum, 2.2) * ringVis * 0.92;
-        vec3 ringGlow = vec3(0.18, 0.60, 1.00) * clampedRing;
-        float inFront = smoothstep(
-            u_portal[1].y + 0.04,
-            u_portal[1].y - 0.04,
-            ringXZ.y
-        );
-        col += ringGlow * (1.0 - inFront);
-
-        vec2 pRadii = max(u_portal[0].zw, vec2(1.0));
-        vec2 q = (p - u_portal[0].xy) / pRadii;
-        float r = length(q);
-        float pxScale = min(pRadii.x, pRadii.y);
-
-        if (r < 1.36 && u_portal[0].z > 2.0) {
-            float t = u_portal[2].x;
-            float auraDist = max(r - 0.98, 0.0);
-            float auraFade = smoothstep(1.36, 1.0, r);
-            float aura = exp(-auraDist * 8.5) * auraFade;
-            col += vec3(0.16, 0.54, 1.00) * aura * 0.52;
-
-            if (r <= 1.04) {
-                float edgePx = (r - 1.0) * pxScale;
-                float mask = 1.0 - smoothstep(-1.2, 1.2, edgePx);
-
-                float ang = atan(q.y, q.x);
-                float pull = pow(1.0 - clamp(r, 0.0, 1.0), 1.35);
-                float swirlAng = ang - 3.6 * pull + t * 1.35;
-                vec2 dir = vec2(cos(swirlAng), sin(swirlAng));
-                vec2 sp = dir * (r * 2.4 + 0.22);
-
-                float n1 = fbm(sp * 1.65 - vec2(t * 0.34, t * 0.22));
-                vec2 warp = vec2(n1 * 1.45 + t * 0.42, -n1 * 1.25);
-                float n2 = fbm(sp * 2.95 + warp);
-
-                float wave = sin(swirlAng * 2.0 + n1 * 4.0 - r * 4.6);
-                float arms = 0.5 + 0.5 * wave;
-                float wisp = pow(1.0 - abs(n2 * 2.0 - 1.0), 2.8);
-
-                vec3 deepVoid = vec3(0.06, 0.04, 0.20);
-                vec3 violet = vec3(0.45, 0.16, 0.84);
-                vec3 vrcBlue = vec3(0.10, 0.48, 0.98);
-                vec3 cyanWisp = vec3(0.50, 0.85, 1.00);
-
-                float nMix = smoothstep(0.16, 0.84, n1);
-                vec3 vortex = mix(deepVoid, violet, nMix);
-                vortex = mix(vortex, vrcBlue, arms * (0.54 + 0.36 * r));
-                vortex += cyanWisp * wisp * (0.36 + 0.26 * r);
-                vortex *= 0.56 + 0.44 * smoothstep(0.0, 0.36, r);
-
-                float innerRim = smoothstep(0.68, 0.99, r);
-                vortex = mix(vortex, vec3(0.24, 0.66, 1.00), innerRim * 0.62);
-
-                float shArg = ang * 3.0 - t * 2.8 + n1 * 3.0;
-                float shimmer = 0.88 + 0.12 * sin(shArg);
-                float rimLine = exp(-abs(edgePx + 1.5) * 0.62) * mask;
-                vec3 rimCol = vec3(0.54, 0.86, 1.00) * shimmer;
-
-                col = mix(col, vortex, mask);
-                col += rimCol * rimLine * 0.76;
-            }
-        }
-
-        col += ringGlow * inFront;
-    }
-
-    outColor = vec4(col, 1.0);
-}
-`;
-
-const PART_VERT_SRC = `#version 300 es
-in vec2 a_quad;
-in vec4 a_part_a;
-in vec4 a_part_b;
-
-uniform vec2 u_res;
-
-out vec2 v_uv;
-out float v_alpha;
-out float v_tint;
-
-void main() {
-    vec2 dir = a_part_a.zw;
-    vec2 perp = vec2(-dir.y, dir.x);
-    float along = a_part_b.x * a_part_b.y;
-    float across = a_part_b.x;
-    vec2 offset = dir * (a_quad.x * along) + perp * (a_quad.y * across);
-    vec2 posPx = a_part_a.xy + offset;
-
-    float ndcX = (posPx.x / max(u_res.x, 1.0)) * 2.0 - 1.0;
-    float ndcY = 1.0 - (posPx.y / max(u_res.y, 1.0)) * 2.0;
-    gl_Position = vec4(ndcX, ndcY, 0.0, 1.0);
-
-    v_uv = a_quad;
-    v_alpha = a_part_b.z;
-    v_tint = a_part_b.w;
-}
-`;
-
-const PART_FRAG_SRC = `#version 300 es
-precision highp float;
-
-in vec2 v_uv;
-in float v_alpha;
-in float v_tint;
-
-out vec4 outColor;
-
-void main() {
-    if (v_tint < 0.5) {
-        float d2 = dot(v_uv, v_uv);
-        if (d2 > 1.0) {
-            discard;
-        }
-        float core = exp(-d2 * 6.8);
-        float halo = exp(-d2 * 2.2) * (1.0 - d2);
-        float glow = core * 0.82 + halo * 0.58;
-
-        float s = clamp(v_tint * 2.2, 0.0, 1.0);
-        vec3 deepBlue = vec3(0.20, 0.64, 1.00);
-        vec3 skyBlue = vec3(0.38, 0.80, 1.00);
-        vec3 baseCol = mix(deepBlue, skyBlue, s);
-        vec3 pCol = baseCol + vec3(0.86, 0.96, 1.00) * core * 0.50;
-        outColor = vec4(pCol * glow * v_alpha, 1.0);
-    } else {
-        float xNorm = clamp((v_uv.x + 1.0) / 1.60, 0.0, 1.0);
-        float nose = 1.0 - smoothstep(0.58, 1.0, v_uv.x);
-        float tail = pow(xNorm, 1.70) * nose;
-
-        float halfW = mix(0.28, 0.92, xNorm);
-        float yn = v_uv.y / max(halfW, 0.1);
-        float edgeY = 1.0 - smoothstep(0.75, 1.0, abs(v_uv.y));
-        float body = exp(-yn * yn * 3.8) * edgeY * tail;
-
-        vec2 headVec = vec2((v_uv.x - 0.56) * 2.5, v_uv.y * 1.15);
-        float head = exp(-dot(headVec, headVec) * 5.8);
-        float glow = body * 0.88 + head * 0.68;
-        if (glow <= 0.002) {
-            discard;
-        }
-
-        float shade = clamp(v_tint - 1.0, 0.0, 1.0);
-        vec3 tailPurple = mix(
-            vec3(0.54, 0.20, 0.96),
-            vec3(0.72, 0.26, 0.94),
-            shade
-        );
-        vec3 headPink = mix(
-            vec3(0.94, 0.38, 0.86),
-            vec3(1.00, 0.54, 0.90),
-            shade
-        );
-        float gradT = clamp((v_uv.x + 0.55) / 1.20, 0.0, 1.0);
-        vec3 pCol = mix(tailPurple, headPink, gradT);
-        pCol += vec3(1.00, 0.90, 0.98) * head * 0.72;
-
-        outColor = vec4(pCol * glow * v_alpha, 1.0);
-    }
-}
-`;
-
-const LABEL_VERT_SRC = `#version 300 es
-in vec2 a_quad;
-
-uniform vec2 u_res;
-uniform vec4 u_rect;
-
-out vec2 v_uv;
-
-void main() {
-    vec2 posPx = u_rect.xy + a_quad * u_rect.zw;
-    float ndcX = (posPx.x / max(u_res.x, 1.0)) * 2.0 - 1.0;
-    float ndcY = 1.0 - (posPx.y / max(u_res.y, 1.0)) * 2.0;
-    gl_Position = vec4(ndcX, ndcY, 0.0, 1.0);
-    v_uv = a_quad * 0.5 + 0.5;
-}
-`;
-
-const LABEL_FRAG_SRC = `#version 300 es
-precision highp float;
-
-in vec2 v_uv;
-
-uniform sampler2D u_tex;
-uniform float u_alpha;
-
-out vec4 outColor;
-
-void main() {
-    vec4 texel = texture(u_tex, v_uv);
-    outColor = texel * u_alpha;
-}
-`;
-
-function drawUsRegionBadge(ctx, cx, cy, radius) {
-    ctx.save();
-    ctx.shadowColor = "transparent";
-    ctx.shadowBlur = 0;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.clip();
-
-    const stripeCount = 7;
-    const stripeH = (radius * 2) / stripeCount;
-    const topY = cy - radius;
-    const leftX = cx - radius;
-
-    for (let i = 0; i < stripeCount; i++) {
-        if (i % 2 === 0) {
-            ctx.fillStyle = "#d92b3a";
-        } else {
-            ctx.fillStyle = "#f4f6f9";
-        }
-        ctx.fillRect(leftX, topY + i * stripeH, radius * 2, stripeH + 0.5);
-    }
-
-    ctx.fillStyle = "#1c4ca8";
-    ctx.fillRect(leftX, topY, radius * 1.1, radius * 1.05);
-
-    ctx.fillStyle = "#ffffff";
-    for (let row = 0; row < 2; row++) {
-        for (let col = 0; col < 3; col++) {
-            const sx = leftX + radius * 0.3 + col * (radius * 0.28);
-            const sy = topY + radius * 0.35 + row * (radius * 0.34);
-            ctx.beginPath();
-            ctx.arc(sx, sy, 1.3, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    }
-    ctx.restore();
-
-    ctx.save();
-    ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
-    ctx.shadowBlur = 4;
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-}
-
-function drawBadgeRing(ctx, cx, cy, radius, strokeColor) {
-    ctx.save();
-    ctx.shadowColor = "rgba(0, 0, 0, 0.55)";
-    ctx.shadowBlur = 5;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 2;
-    ctx.fillStyle = "rgba(14, 18, 26, 0.54)";
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 5.0;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-}
-
-function drawQuadPane(ctx, x0, y0, x1, y1, x2, y2, x3, y3) {
-    ctx.beginPath();
-    ctx.moveTo(x0, y0);
-    ctx.lineTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.lineTo(x3, y3);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawWindowsBadge(ctx, cx, cy, radius) {
-    const color = "#00a8ff";
-    drawBadgeRing(ctx, cx, cy, radius, color);
-
-    ctx.save();
-    ctx.shadowColor = "transparent";
-    ctx.fillStyle = color;
-
-    drawQuadPane(
-        ctx,
-        cx - 16.0,
-        cy - 12.0,
-        cx - 2.2,
-        cy - 13.9,
-        cx - 2.2,
-        cy - 1.5,
-        cx - 16.0,
-        cy - 1.5
-    );
-    drawQuadPane(
-        ctx,
-        cx + 0.8,
-        cy - 14.3,
-        cx + 16.2,
-        cy - 16.4,
-        cx + 16.2,
-        cy - 1.5,
-        cx + 0.8,
-        cy - 1.5
-    );
-    drawQuadPane(
-        ctx,
-        cx - 16.0,
-        cy + 1.5,
-        cx - 2.2,
-        cy + 1.5,
-        cx - 2.2,
-        cy + 13.9,
-        cx - 16.0,
-        cy + 12.0
-    );
-    drawQuadPane(
-        ctx,
-        cx + 0.8,
-        cy + 1.5,
-        cx + 16.2,
-        cy + 1.5,
-        cx + 16.2,
-        cy + 16.4,
-        cx + 0.8,
-        cy + 14.3
-    );
-    ctx.restore();
-}
-
-function drawAndroidBadge(ctx, cx, cy, radius) {
-    const color = "#2ed57a";
-    drawBadgeRing(ctx, cx, cy, radius, color);
-
-    ctx.save();
-    ctx.shadowColor = "transparent";
-    ctx.fillStyle = color;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3.2;
-    ctx.lineCap = "round";
-
-    const domeY = cy + 9.5;
-    ctx.beginPath();
-    ctx.arc(cx, domeY, 18.2, Math.PI, 0, false);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(cx - 9.2, cy - 4.5);
-    ctx.lineTo(cx - 14.5, cy - 13.5);
-    ctx.moveTo(cx + 9.2, cy - 4.5);
-    ctx.lineTo(cx + 14.5, cy - 13.5);
-    ctx.stroke();
-
-    ctx.fillStyle = "#121822";
-    ctx.beginPath();
-    ctx.arc(cx - 8.2, cy + 2.0, 2.3, 0, Math.PI * 2);
-    ctx.arc(cx + 8.2, cy + 2.0, 2.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-}
-
-function drawAppleBadge(ctx, cx, cy, radius) {
-    const color = "#e8eaf2";
-    drawBadgeRing(ctx, cx, cy, radius, color);
-
-    ctx.save();
-    ctx.shadowColor = "transparent";
-    ctx.fillStyle = color;
-    ctx.translate(cx - 11.6 * 1.46, cy - 12.2 * 1.46);
-    ctx.scale(1.46, 1.46);
-
-    ctx.beginPath();
-    ctx.moveTo(12.0, 6.8);
-    ctx.bezierCurveTo(10.5, 6.8, 9.2, 5.6, 7.6, 5.7);
-    ctx.bezierCurveTo(5.1, 5.8, 2.8, 7.6, 2.8, 11.4);
-    ctx.bezierCurveTo(2.8, 15.6, 5.9, 22.2, 8.5, 22.2);
-    ctx.bezierCurveTo(9.9, 22.2, 10.6, 21.2, 12.1, 21.2);
-    ctx.bezierCurveTo(13.6, 21.2, 14.2, 22.2, 15.7, 22.2);
-    ctx.bezierCurveTo(17.7, 22.2, 19.3, 19.0, 20.2, 16.6);
-    ctx.bezierCurveTo(17.1, 15.3, 16.7, 10.5, 19.6, 8.8);
-    ctx.bezierCurveTo(18.3, 6.8, 16.4, 5.7, 14.5, 5.7);
-    ctx.bezierCurveTo(13.0, 5.7, 12.9, 6.8, 12.0, 6.8);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(11.9, 5.5);
-    ctx.bezierCurveTo(11.7, 3.2, 13.7, 1.1, 16.0, 0.9);
-    ctx.bezierCurveTo(16.3, 3.3, 14.2, 5.6, 11.9, 5.5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-}
-
-function paintPortalLabel(ctx, instanceId, playerCount, countdownSec) {
-    ctx.clearRect(0, 0, LABEL_TEX_W, LABEL_TEX_H);
-
-    const midX = LABEL_TEX_W * 0.5;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = "#f5f7fa";
-    ctx.shadowColor = "rgba(0, 0, 0, 0.88)";
-    ctx.shadowBlur = 7;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 2;
-
-    ctx.font = `500 42px ${LABEL_FONT}`;
-    ctx.fillText("Coming Soon", midX, 58);
-
-    ctx.font = `400 34px ${LABEL_FONT}`;
-    ctx.fillText("Dezzyne", midX, 114);
-
-    const regionStr = `(W) #${String(instanceId)}  Public`;
-    ctx.font = `400 32px ${LABEL_FONT}`;
-    const textW = ctx.measureText(regionStr).width;
-    const badgeR = 14;
-    const gap = 11;
-    const totalW = badgeR * 2 + gap + textW;
-    const startX = midX - totalW * 0.5;
-
-    drawUsRegionBadge(ctx, startX + badgeR, 170 - 11, badgeR);
-
-    ctx.textAlign = "left";
-    ctx.fillStyle = "#f5f7fa";
-    ctx.shadowColor = "rgba(0, 0, 0, 0.88)";
-    ctx.shadowBlur = 7;
-    ctx.fillText(regionStr, startX + badgeR * 2 + gap, 170);
-
-    ctx.textAlign = "center";
-    ctx.font = `400 32px ${LABEL_FONT}`;
-    ctx.fillText(`${String(playerCount)} / 80`, midX, 226);
-
-    ctx.font = `700 42px ${LABEL_FONT}`;
-    ctx.fillText(String(countdownSec), midX, 288);
-
-    // VRChat platform compatibility badges at upper-right of portal oval
-    const platY = 371;
-    const platR = 35;
-    const platStep = 80;
-    const firstPlatX = midX + 217;
-
-    drawWindowsBadge(ctx, firstPlatX, platY, platR);
-    drawAndroidBadge(ctx, firstPlatX + platStep, platY, platR);
-    drawAppleBadge(ctx, firstPlatX + platStep * 2, platY, platR);
-}
-
-function hasValidWasmHeader(bytes) {
-    if (!(bytes instanceof ArrayBuffer)) {
+function hasValidWasmHeader(byteBuffer) {
+    if (!(byteBuffer instanceof ArrayBuffer)) {
         return false;
     }
-    if (bytes.byteLength < 8 || bytes.byteLength > MAX_WASM_BYTES) {
+    const byteLength = byteBuffer.byteLength;
+    if (byteLength < 8 || byteLength > MAXIMUM_WASM_BYTES) {
         return false;
     }
-    const header = new Uint8Array(bytes, 0, 8);
+    const headerBytes = new Uint8Array(byteBuffer, 0, 8);
     return (
-        header[0] === 0x00 &&
-        header[1] === 0x61 &&
-        header[2] === 0x73 &&
-        header[3] === 0x6d &&
-        header[4] === 0x01 &&
-        header[5] === 0x00 &&
-        header[6] === 0x00 &&
-        header[7] === 0x00
+        headerBytes[0] === 0x00 &&
+        headerBytes[1] === 0x61 &&
+        headerBytes[2] === 0x73 &&
+        headerBytes[3] === 0x6d &&
+        headerBytes[4] === 0x01 &&
+        headerBytes[5] === 0x00 &&
+        headerBytes[6] === 0x00 &&
+        headerBytes[7] === 0x00
     );
+}
+
+function isValidContentLengthHeader(contentLengthHeader) {
+    if (contentLengthHeader === null) {
+        return true;
+    }
+    const declaredLength = Number(contentLengthHeader);
+    return (
+        Number.isFinite(declaredLength) &&
+        declaredLength >= 8 &&
+        declaredLength <= MAXIMUM_WASM_BYTES
+    );
+}
+
+function verifyWasmExports(wasmInstance) {
+    const wasmExports = wasmInstance?.exports;
+    if (!wasmExports || !(wasmExports.memory instanceof WebAssembly.Memory)) {
+        return null;
+    }
+    for (
+        let exportIndex = 0;
+        exportIndex < REQUIRED_FUNCTION_EXPORTS.length;
+        exportIndex++
+    ) {
+        const exportName = REQUIRED_FUNCTION_EXPORTS[exportIndex];
+        if (typeof wasmExports[exportName] !== "function") {
+            return null;
+        }
+    }
+    return wasmExports;
 }
 
 async function loadVerifiedWasm() {
@@ -660,693 +115,1802 @@ async function loadVerifiedWasm() {
         return null;
     }
 
-    const resp = await fetch(WASM_URL, FETCH_OPTS);
-    if (!resp.ok || resp.status !== 200 || resp.type !== "basic") {
+    const response = await fetch(WASM_MODULE_URL, WASM_FETCH_OPTIONS);
+    const validResponseType =
+        response.type === "basic" || response.type === "cors";
+    if (!response.ok || response.status !== 200 || !validResponseType) {
         return null;
     }
 
-    const resUrl = new URL(resp.url, window.location.origin);
-    if (resUrl.origin !== window.location.origin) {
+    const responseUrl = new URL(response.url, window.location.origin);
+    if (responseUrl.origin !== window.location.origin) {
         return null;
     }
-    if (resUrl.pathname !== WASM_URL) {
+    if (responseUrl.pathname !== WASM_MODULE_URL) {
         return null;
     }
 
-    const rawType = resp.headers.get("content-type") || "";
-    const contentType = rawType.toLowerCase();
+    const contentLengthHeader = response.headers.get("content-length");
+    if (!isValidContentLengthHeader(contentLengthHeader)) {
+        return null;
+    }
+
+    const rawContentType = response.headers.get("content-type") || "";
+    const contentType = rawContentType.toLowerCase();
     const isWasmMime = contentType.startsWith("application/wasm");
     const isOctetMime = contentType.startsWith("application/octet-stream");
     if (contentType && !isWasmMime && !isOctetMime) {
         return null;
     }
 
-    const bytes = await resp.arrayBuffer();
-    if (!hasValidWasmHeader(bytes)) {
-        return null;
-    }
-
     const emptyImports = Object.create(null);
-    const { instance } = await WebAssembly.instantiate(bytes, emptyImports);
-    const exports = instance?.exports;
-    if (!exports || !(exports.memory instanceof WebAssembly.Memory)) {
+    if (isWasmMime && typeof WebAssembly.instantiateStreaming === "function") {
+        const { instance } = await WebAssembly.instantiateStreaming(
+            response,
+            emptyImports
+        );
+        return verifyWasmExports(instance);
+    }
+
+    const wasmBytes = await response.arrayBuffer();
+    if (!hasValidWasmHeader(wasmBytes)) {
         return null;
     }
-
-    for (let i = 0; i < REQUIRED_FN_EXPORTS.length; i++) {
-        const fnName = REQUIRED_FN_EXPORTS[i];
-        if (typeof exports[fnName] !== "function") {
-            return null;
-        }
-    }
-
-    return exports;
+    const { instance } = await WebAssembly.instantiate(
+        wasmBytes,
+        emptyImports
+    );
+    return verifyWasmExports(instance);
 }
 
-function readF32View(memory, ptr, length) {
-    if (length === 0) {
+const INITIAL_WASM_PROMISE = loadVerifiedWasm().catch(() => null);
+
+const FULLSCREEN_TRIANGLE_VERTEX_SHADER = `#version 300 es
+in vec2 a_position;
+void main() {
+    gl_Position = vec4(a_position, 0.0, 1.0);
+}
+`;
+
+const BOUNDED_QUAD_VERTEX_SHADER = `#version 300 es
+in vec2 a_quad;
+
+uniform vec2 u_resolution;
+uniform vec4 u_bounds_rect;
+
+out vec2 v_quad_uv;
+
+void main() {
+    vec2 pixelPosition = u_bounds_rect.xy + a_quad * u_bounds_rect.zw;
+    float clipSpaceX =
+        (pixelPosition.x / max(u_resolution.x, 1.0)) * 2.0 - 1.0;
+    float clipSpaceY =
+        1.0 - (pixelPosition.y / max(u_resolution.y, 1.0)) * 2.0;
+    gl_Position = vec4(clipSpaceX, clipSpaceY, 0.0, 1.0);
+    v_quad_uv = a_quad * 0.5 + 0.5;
+}
+`;
+
+function buildGridFragmentShader(sceneMode) {
+    const hasPortals = sceneMode === SCENE_PORTALS;
+    const hasKeypad = sceneMode === SCENE_KEYPAD;
+
+    const portalDeclarations = hasPortals
+        ? `uniform int u_portal_count;
+uniform vec4 u_portals[12];
+uniform vec4 u_rings[8];
+float evaluatePortalRings(float radialDistance, vec4 radii, vec4 alphas) {
+    vec4 radialDelta = radialDistance - radii;
+    vec4 squaredDelta = radialDelta * radialDelta;
+    vec4 ringProfile =
+        exp(-squaredDelta * 34.0) + exp(-squaredDelta * 5.5) * 0.45;
+    return dot(ringProfile, alphas);
+}
+`
+        : "";
+
+    const keypadDeclaration = hasKeypad
+        ? "uniform vec4 u_keypad_floor;\n"
+        : "";
+
+    const portalLightingBody = hasPortals
+        ? `    float ringDenominator = min(rayDirection.y, -0.006);
+    float ringVisibility = smoothstep(-0.008, -0.028, rayDirection.y);
+    for (int portalIndex = 0; portalIndex < u_portal_count; portalIndex++) {
+        vec4 portalWorld = u_portals[portalIndex * 3 + 1];
+        vec4 portalState = u_portals[portalIndex * 3 + 2];
+        if (portalWorld.z <= 0.5) {
+            continue;
+        }
+        float portalScale = max(portalState.z, 0.1);
+        float floorDistance =
+            length(floorWorldXz - portalWorld.xy) / portalScale;
+        float floorGlow =
+            exp(-floorDistance * floorDistance * 0.52)
+            * portalState.y
+            * floorMask;
+        surfaceColor += vec3(0.04, 0.13, 0.28) * floorGlow;
+        surfaceColor += vec3(0.16, 0.54, 1.00)
+            * max(minorLine, majorLine)
+            * floorGlow
+            * 0.55;
+
+        float ringIntersectionDistance =
+            (portalWorld.w - cameraPosition.y) / ringDenominator;
+        vec2 ringPlaneXz =
+            cameraPosition.xz + rayDirection.xz * ringIntersectionDistance;
+        float ringRadialDistance =
+            length(ringPlaneXz - portalWorld.xy) / portalScale;
+        vec4 ringPair0 = u_rings[portalIndex * 2];
+        vec4 ringPair1 = u_rings[portalIndex * 2 + 1];
+        vec4 ringRadii = vec4(ringPair0.xz, ringPair1.xz) / portalScale;
+        vec4 rawAlphas = vec4(ringPair0.yw, ringPair1.yw);
+        vec4 ringAlphas = step(vec4(0.001), rawAlphas) * rawAlphas;
+        float ringSum =
+            evaluatePortalRings(ringRadialDistance, ringRadii, ringAlphas);
+        surfaceColor += vec3(0.18, 0.60, 1.00)
+            * min(ringSum, 2.2)
+            * ringVisibility
+            * 0.92;
+    }
+`
+        : "";
+
+    const keypadLightingBody = hasKeypad
+        ? `    if (u_keypad_floor.z > 0.001) {
+        vec2 floorOffset = floorWorldXz - u_keypad_floor.xy;
+        float floorDistance = length(floorOffset);
+        float lightPool = exp(-floorDistance * floorDistance * 0.42)
+            * floorMask
+            * u_keypad_floor.z;
+        float tintGradient = clamp(floorOffset.x * 0.42 + 0.5, 0.0, 1.0);
+        vec3 floorTint = mix(
+            vec3(0.24, 0.88, 0.72),
+            vec3(0.72, 0.40, 0.96),
+            tintGradient
+        );
+        float hoverBoost = 1.0 + u_keypad_floor.w * 0.28;
+        surfaceColor += floorTint * lightPool * 0.09 * hoverBoost;
+        surfaceColor += floorTint
+            * max(minorLine, majorLine)
+            * lightPool
+            * 0.36
+            * hoverBoost;
+    }
+`
+        : "";
+
+    return `#version 300 es
+precision highp float;
+
+uniform vec2 u_resolution;
+uniform float u_device_pixel_ratio;
+uniform vec4 u_camera[5];
+${portalDeclarations}${keypadDeclaration}
+out vec4 outColor;
+
+vec2 evaluateGridAxis(
+    vec2 gridCoord,
+    vec2 derivativeWidth,
+    float radiusPixels
+) {
+    vec2 lineCoverage = clamp(1.0 - derivativeWidth * 1.15, 0.0, 1.0);
+    vec2 distancePixels =
+        abs(fract(gridCoord - 0.5) - 0.5) / max(derivativeWidth, vec2(1e-4));
+    vec2 smoothEdge =
+        smoothstep(radiusPixels - 0.55, radiusPixels + 0.55, distancePixels);
+    return (1.0 - smoothEdge) * lineCoverage;
+}
+
+void main() {
+    float pixelX = gl_FragCoord.x / u_device_pixel_ratio;
+    float pixelY = u_resolution.y - gl_FragCoord.y / u_device_pixel_ratio;
+    vec2 pixelPosition = vec2(pixelX, pixelY);
+    float halfHeight = max(u_resolution.y * 0.5, 1.0);
+
+    float horizontalTangent =
+        ((pixelPosition.x - u_resolution.x * 0.5) / halfHeight)
+        * u_camera[0].w;
+    float verticalTangent =
+        ((u_resolution.y * 0.5 - pixelPosition.y) / halfHeight)
+        * u_camera[0].w;
+    vec3 cameraPosition = u_camera[0].xyz;
+    vec3 unnormalizedRay = u_camera[1].xyz
+        + horizontalTangent * u_camera[2].xyz
+        + verticalTangent * u_camera[3].xyz;
+    vec3 rayDirection = normalize(unnormalizedRay);
+    float scrollOffsetZ = u_camera[1].w;
+
+    vec3 surfaceColor = vec3(0.1686);
+    vec2 centeredUv = (pixelPosition / u_resolution) - 0.5;
+    surfaceColor -= dot(centeredUv, centeredUv) * 0.032;
+    float horizonGlow = exp(-abs(rayDirection.y) * 16.0);
+    surfaceColor += vec3(0.022, 0.023, 0.025) * horizonGlow;
+
+    float floorDenominator = min(rayDirection.y, -0.012);
+    float floorIntersectionDistance =
+        (u_camera[2].w - cameraPosition.y) / floorDenominator;
+    vec2 floorWorldXz =
+        cameraPosition.xz + rayDirection.xz * floorIntersectionDistance;
+    vec2 scrolledFloorXz = floorWorldXz + vec2(0.0, scrollOffsetZ);
+    vec2 floorDerivative = fwidth(scrolledFloorXz);
+
+    float floorMask = smoothstep(-0.014, -0.055, rayDirection.y);
+    float minorVisibility =
+        floorMask * exp(-floorIntersectionDistance * 0.095);
+    float majorVisibility =
+        floorMask * exp(-floorIntersectionDistance * 0.055);
+
+    surfaceColor -=
+        vec3(0.015) * floorMask * exp(-floorIntersectionDistance * 0.14);
+
+    vec2 minorAxes = evaluateGridAxis(scrolledFloorXz, floorDerivative, 0.45);
+    vec2 majorAxes = evaluateGridAxis(
+        scrolledFloorXz * 0.25,
+        floorDerivative * 0.25,
+        0.72
+    );
+    float minorLine = max(minorAxes.x, minorAxes.y);
+    float majorLine = max(majorAxes.x, majorAxes.y);
+    float majorIntersection = majorAxes.x * majorAxes.y;
+
+    float cursorDistance = length(floorWorldXz - u_camera[4].xy);
+    float spotlightFalloff = exp(-cursorDistance * cursorDistance * 0.11);
+    float cursorSpotlight = spotlightFalloff * u_camera[4].w * floorMask;
+
+    float gridLuminance = minorLine * 0.055 * minorVisibility
+        + majorLine * 0.135 * majorVisibility
+        + majorIntersection * 0.075 * majorVisibility
+        + max(minorLine, majorLine) * 0.19 * cursorSpotlight
+        + 0.020 * cursorSpotlight;
+    surfaceColor += vec3(gridLuminance);
+
+${portalLightingBody}${keypadLightingBody}
+    outColor = vec4(surfaceColor, 1.0);
+}
+`;
+}
+
+function readFloat32View(wasmMemory, byteOffset, elementCount) {
+    if (elementCount === 0) {
         return new Float32Array(0);
     }
-    if (!Number.isInteger(ptr) || ptr < 0 || (ptr & 3) !== 0) {
+    if (
+        !Number.isInteger(byteOffset) ||
+        byteOffset < 0 ||
+        (byteOffset & 3) !== 0
+    ) {
         return null;
     }
-    const buf = memory.buffer;
-    const byteLen = length * 4;
-    if (ptr + byteLen > buf.byteLength) {
+    const memoryBuffer = wasmMemory.buffer;
+    const byteLength = elementCount * 4;
+    if (byteOffset + byteLength > memoryBuffer.byteLength) {
         return null;
     }
-    return new Float32Array(buf, ptr, length);
+    return new Float32Array(memoryBuffer, byteOffset, elementCount);
 }
 
-function compileShader(gl, type, src) {
-    const sh = gl.createShader(type);
-    if (!sh) {
+function readUint32View(wasmMemory, byteOffset, elementCount) {
+    if (elementCount === 0) {
+        return new Uint32Array(0);
+    }
+    if (
+        !Number.isInteger(byteOffset) ||
+        byteOffset < 0 ||
+        (byteOffset & 3) !== 0
+    ) {
         return null;
     }
-    gl.shaderSource(sh, src);
-    gl.compileShader(sh);
-    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
-        gl.deleteShader(sh);
+    const memoryBuffer = wasmMemory.buffer;
+    const byteLength = elementCount * 4;
+    if (byteOffset + byteLength > memoryBuffer.byteLength) {
         return null;
     }
-    return sh;
+    return new Uint32Array(memoryBuffer, byteOffset, elementCount);
 }
 
-function buildProgram(gl, vsSrc, fsSrc) {
-    const vs = compileShader(gl, gl.VERTEX_SHADER, vsSrc);
-    const fs = compileShader(gl, gl.FRAGMENT_SHADER, fsSrc);
-    if (!vs || !fs) {
-        if (vs) {
-            gl.deleteShader(vs);
-        }
-        if (fs) {
-            gl.deleteShader(fs);
-        }
-        return null;
+function deleteShaderIfPresent(glContext, shader) {
+    if (!shader) {
+        return;
     }
-
-    const prog = gl.createProgram();
-    if (!prog) {
-        gl.deleteShader(vs);
-        gl.deleteShader(fs);
-        return null;
-    }
-    gl.attachShader(prog, vs);
-    gl.attachShader(prog, fs);
-    gl.linkProgram(prog);
-    gl.deleteShader(vs);
-    gl.deleteShader(fs);
-
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-        gl.deleteProgram(prog);
-        return null;
-    }
-    return prog;
+    glContext.deleteShader(shader);
 }
 
-function createWebGL2Renderer(canvas, hasPortal, particleCount) {
-    const gl = canvas.getContext("webgl2", GL_CTX_OPTS);
-    if (!gl) {
+function compileShaderSynchronously(glContext, shaderType, shaderSource) {
+    const shader = glContext.createShader(shaderType);
+    if (!shader) {
         return null;
     }
-
-    const stageProg = buildProgram(gl, VERT_SRC, FRAG_SRC);
-    if (!stageProg) {
+    glContext.shaderSource(shader, shaderSource);
+    glContext.compileShader(shader);
+    if (!glContext.getShaderParameter(shader, glContext.COMPILE_STATUS)) {
+        glContext.deleteShader(shader);
         return null;
     }
+    return shader;
+}
 
-    const stageVao = gl.createVertexArray();
-    const triBuf = gl.createBuffer();
-    if (!stageVao || !triBuf) {
-        return null;
-    }
-
-    gl.bindVertexArray(stageVao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, triBuf);
-    gl.bufferData(
-        gl.ARRAY_BUFFER,
-        new Float32Array([-1, -1, 3, -1, -1, 3]),
-        gl.STATIC_DRAW
+function buildProgramSynchronously(
+    glContext,
+    vertexShaderSource,
+    fragmentShaderSource
+) {
+    const vertexShader = compileShaderSynchronously(
+        glContext,
+        glContext.VERTEX_SHADER,
+        vertexShaderSource
     );
-
-    const locPos = gl.getAttribLocation(stageProg, "a_pos");
-    if (locPos < 0) {
+    const fragmentShader = compileShaderSynchronously(
+        glContext,
+        glContext.FRAGMENT_SHADER,
+        fragmentShaderSource
+    );
+    if (!vertexShader || !fragmentShader) {
+        deleteShaderIfPresent(glContext, vertexShader);
+        deleteShaderIfPresent(glContext, fragmentShader);
         return null;
     }
-    gl.enableVertexAttribArray(locPos);
-    gl.vertexAttribPointer(locPos, 2, gl.FLOAT, false, 0, 0);
-
-    const stageUni = Object.assign(Object.create(null), {
-        res: gl.getUniformLocation(stageProg, "u_res"),
-        dpr: gl.getUniformLocation(stageProg, "u_dpr"),
-        cam: gl.getUniformLocation(stageProg, "u_cam[0]"),
-        portal: gl.getUniformLocation(stageProg, "u_portal[0]"),
-        rings: gl.getUniformLocation(stageProg, "u_rings[0]"),
-    });
-
-    let partProg = null;
-    let partVao = null;
-    let quadBuf = null;
-    let instBuf = null;
-    let partResLoc = null;
-
-    let labelProg = null;
-    let labelVao = null;
-    let labelTex = null;
-    let labelCanvas = null;
-    let labelCtx = null;
-    let labelUni = null;
-    let lastCountdown = -1;
-
-    if (hasPortal && particleCount > 0) {
-        partProg = buildProgram(gl, PART_VERT_SRC, PART_FRAG_SRC);
-        partVao = gl.createVertexArray();
-        quadBuf = gl.createBuffer();
-        instBuf = gl.createBuffer();
-        if (!partProg || !partVao || !quadBuf || !instBuf) {
-            return null;
-        }
-
-        const quadVerts = new Float32Array([
-            -1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1,
-        ]);
-
-        gl.bindVertexArray(partVao);
-        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
-        gl.bufferData(gl.ARRAY_BUFFER, quadVerts, gl.STATIC_DRAW);
-
-        const locQuad = gl.getAttribLocation(partProg, "a_quad");
-        if (locQuad < 0) {
-            return null;
-        }
-        gl.enableVertexAttribArray(locQuad);
-        gl.vertexAttribPointer(locQuad, 2, gl.FLOAT, false, 0, 0);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
-        const byteCap = particleCount * PARTICLE_FLOATS * 4;
-        gl.bufferData(gl.ARRAY_BUFFER, byteCap, gl.DYNAMIC_DRAW);
-
-        const locA = gl.getAttribLocation(partProg, "a_part_a");
-        const locB = gl.getAttribLocation(partProg, "a_part_b");
-        if (locA < 0 || locB < 0) {
-            return null;
-        }
-        const stride = PARTICLE_FLOATS * 4;
-        gl.enableVertexAttribArray(locA);
-        gl.vertexAttribPointer(locA, 4, gl.FLOAT, false, stride, 0);
-        gl.vertexAttribDivisor(locA, 1);
-
-        gl.enableVertexAttribArray(locB);
-        gl.vertexAttribPointer(locB, 4, gl.FLOAT, false, stride, 16);
-        gl.vertexAttribDivisor(locB, 1);
-
-        partResLoc = gl.getUniformLocation(partProg, "u_res");
-
-        labelProg = buildProgram(gl, LABEL_VERT_SRC, LABEL_FRAG_SRC);
-        labelVao = gl.createVertexArray();
-        labelTex = gl.createTexture();
-        labelCanvas = document.createElement("canvas");
-        labelCanvas.width = LABEL_TEX_W;
-        labelCanvas.height = LABEL_TEX_H;
-        labelCtx = labelCanvas.getContext("2d");
-
-        if (!labelProg || !labelVao || !labelTex || !labelCtx) {
-            return null;
-        }
-
-        gl.bindVertexArray(labelVao);
-        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
-        const locLabelQuad = gl.getAttribLocation(labelProg, "a_quad");
-        if (locLabelQuad < 0) {
-            return null;
-        }
-        gl.enableVertexAttribArray(locLabelQuad);
-        gl.vertexAttribPointer(locLabelQuad, 2, gl.FLOAT, false, 0, 0);
-
-        gl.bindTexture(gl.TEXTURE_2D, labelTex);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(
-            gl.TEXTURE_2D,
-            gl.TEXTURE_MIN_FILTER,
-            gl.LINEAR_MIPMAP_LINEAR
-        );
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-        labelUni = Object.assign(Object.create(null), {
-            res: gl.getUniformLocation(labelProg, "u_res"),
-            rect: gl.getUniformLocation(labelProg, "u_rect"),
-            tex: gl.getUniformLocation(labelProg, "u_tex"),
-            alpha: gl.getUniformLocation(labelProg, "u_alpha"),
-        });
+    const shaderProgram = glContext.createProgram();
+    if (!shaderProgram) {
+        glContext.deleteShader(vertexShader);
+        glContext.deleteShader(fragmentShader);
+        return null;
     }
+    glContext.attachShader(shaderProgram, vertexShader);
+    glContext.attachShader(shaderProgram, fragmentShader);
+    glContext.linkProgram(shaderProgram);
+    glContext.deleteShader(vertexShader);
+    glContext.deleteShader(fragmentShader);
+    if (!glContext.getProgramParameter(shaderProgram, glContext.LINK_STATUS)) {
+        glContext.deleteProgram(shaderProgram);
+        return null;
+    }
+    return shaderProgram;
+}
+
+function isProgramCompileCompleted(
+    glContext,
+    parallelCompileExtension,
+    shaderProgram
+) {
+    if (!parallelCompileExtension) {
+        return true;
+    }
+    return Boolean(
+        glContext.getProgramParameter(
+            shaderProgram,
+            parallelCompileExtension.COMPLETION_STATUS_KHR
+        )
+    );
+}
+
+function startAsynchronousProgram(
+    glContext,
+    parallelCompileExtension,
+    vertexShaderSource,
+    fragmentShaderSource,
+    onProgramLinked
+) {
+    const vertexShader = glContext.createShader(glContext.VERTEX_SHADER);
+    const fragmentShader = glContext.createShader(glContext.FRAGMENT_SHADER);
+    const shaderProgram = glContext.createProgram();
+    if (!vertexShader || !fragmentShader || !shaderProgram) {
+        return {
+            poll() {
+                return false;
+            },
+            dispose() {},
+        };
+    }
+
+    glContext.shaderSource(vertexShader, vertexShaderSource);
+    glContext.compileShader(vertexShader);
+    glContext.shaderSource(fragmentShader, fragmentShaderSource);
+    glContext.compileShader(fragmentShader);
+    glContext.attachShader(shaderProgram, vertexShader);
+    glContext.attachShader(shaderProgram, fragmentShader);
+    glContext.linkProgram(shaderProgram);
+
+    let isCompleted = false;
 
     return {
-        updateLabel(instanceId, playerCount, countdownSec) {
-            if (!labelCtx || !labelTex || countdownSec === lastCountdown) {
-                return;
+        poll() {
+            if (isCompleted) {
+                return false;
             }
-            lastCountdown = countdownSec;
-            paintPortalLabel(labelCtx, instanceId, playerCount, countdownSec);
-            gl.bindTexture(gl.TEXTURE_2D, labelTex);
-            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-            gl.texImage2D(
-                gl.TEXTURE_2D,
-                0,
-                gl.RGBA,
-                gl.RGBA,
-                gl.UNSIGNED_BYTE,
-                labelCanvas
+            const ready = isProgramCompileCompleted(
+                glContext,
+                parallelCompileExtension,
+                shaderProgram
             );
-            gl.generateMipmap(gl.TEXTURE_2D);
-        },
-        render(w, h, dpr, camBuf, portalBuf, ringBuf, partBuf) {
-            if (gl.isContextLost()) {
+            if (!ready) {
                 return false;
             }
 
-            gl.viewport(0, 0, canvas.width, canvas.height);
-            gl.useProgram(stageProg);
-            gl.bindVertexArray(stageVao);
-
-            gl.uniform2f(stageUni.res, w, h);
-            gl.uniform1f(stageUni.dpr, dpr);
-            gl.uniform4fv(stageUni.cam, camBuf);
-            gl.uniform4fv(stageUni.portal, portalBuf);
-            gl.uniform4fv(stageUni.rings, ringBuf);
-
-            gl.drawArrays(gl.TRIANGLES, 0, 3);
-
-            if (partProg && partBuf && partBuf.length > 0) {
-                gl.enable(gl.BLEND);
-                gl.blendFunc(gl.ONE, gl.ONE);
-                gl.useProgram(partProg);
-                gl.bindVertexArray(partVao);
-                gl.uniform2f(partResLoc, w, h);
-
-                gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
-                gl.bufferSubData(gl.ARRAY_BUFFER, 0, partBuf);
-                gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, particleCount);
-
-                if (labelProg && labelTex && portalBuf[3] > 2.0) {
-                    const pcx = portalBuf[0];
-                    const pcy = portalBuf[1];
-                    const pry = portalBuf[3];
-                    const alpha = Math.min(1, Math.max(0, portalBuf[9]));
-
-                    const halfH = pry * 0.68;
-                    const halfW = halfH * (LABEL_TEX_W / LABEL_TEX_H);
-                    const labelCy = pcy - pry * 1.36;
-
-                    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-                    gl.useProgram(labelProg);
-                    gl.bindVertexArray(labelVao);
-                    gl.activeTexture(gl.TEXTURE0);
-                    gl.bindTexture(gl.TEXTURE_2D, labelTex);
-
-                    gl.uniform2f(labelUni.res, w, h);
-                    gl.uniform4f(labelUni.rect, pcx, labelCy, halfW, halfH);
-                    gl.uniform1i(labelUni.tex, 0);
-                    gl.uniform1f(labelUni.alpha, alpha);
-                    gl.drawArrays(gl.TRIANGLES, 0, 6);
-                }
-
-                gl.disable(gl.BLEND);
+            isCompleted = true;
+            glContext.deleteShader(vertexShader);
+            glContext.deleteShader(fragmentShader);
+            const isLinked = glContext.getProgramParameter(
+                shaderProgram,
+                glContext.LINK_STATUS
+            );
+            if (!isLinked) {
+                glContext.deleteProgram(shaderProgram);
+                return false;
             }
+            onProgramLinked(shaderProgram);
+            return true;
+        },
+        dispose() {
+            if (!isCompleted) {
+                isCompleted = true;
+                glContext.deleteShader(vertexShader);
+                glContext.deleteShader(fragmentShader);
+            }
+            glContext.deleteProgram(shaderProgram);
+        },
+    };
+}
+
+function createInitialCameraBuffer() {
+    const cameraBuffer = new Float32Array(CAMERA_FLOATS);
+    const initialPitch = -0.14;
+    const pitchSine = Math.sin(initialPitch);
+    const pitchCosine = Math.cos(initialPitch);
+    cameraBuffer[3] = 0.58;
+    cameraBuffer[5] = pitchSine;
+    cameraBuffer[6] = pitchCosine;
+    cameraBuffer[8] = 1.0;
+    cameraBuffer[11] = -1.55;
+    cameraBuffer[13] = pitchCosine;
+    cameraBuffer[14] = -pitchSine;
+    cameraBuffer[17] = 8.0;
+    cameraBuffer[18] = -1.0;
+    return cameraBuffer;
+}
+
+function createStageRenderer(stage, sceneMode) {
+    const glContext = stage.getContext("webgl2", WEBGL_CONTEXT_OPTIONS);
+    if (!glContext) {
+        return null;
+    }
+
+    const parallelCompileExtension = glContext.getExtension(
+        "KHR_parallel_shader_compile"
+    );
+    const gridProgram = buildProgramSynchronously(
+        glContext,
+        FULLSCREEN_TRIANGLE_VERTEX_SHADER,
+        buildGridFragmentShader(sceneMode)
+    );
+    if (!gridProgram) {
+        return null;
+    }
+
+    const gridVertexArray = glContext.createVertexArray();
+    const triangleBuffer = glContext.createBuffer();
+    const quadBuffer = glContext.createBuffer();
+    if (!gridVertexArray || !triangleBuffer || !quadBuffer) {
+        return null;
+    }
+
+    glContext.bindVertexArray(gridVertexArray);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, triangleBuffer);
+    glContext.bufferData(
+        glContext.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 3, -1, -1, 3]),
+        glContext.STATIC_DRAW
+    );
+    const gridPositionLocation = glContext.getAttribLocation(
+        gridProgram,
+        "a_position"
+    );
+    if (gridPositionLocation < 0) {
+        return null;
+    }
+    glContext.enableVertexAttribArray(gridPositionLocation);
+    glContext.vertexAttribPointer(
+        gridPositionLocation,
+        2,
+        glContext.FLOAT,
+        false,
+        0,
+        0
+    );
+
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, quadBuffer);
+    glContext.bufferData(
+        glContext.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
+        glContext.STATIC_DRAW
+    );
+
+    const gridUniforms = Object.assign(Object.create(null), {
+        resolution: glContext.getUniformLocation(gridProgram, "u_resolution"),
+        devicePixelRatio: glContext.getUniformLocation(
+            gridProgram,
+            "u_device_pixel_ratio"
+        ),
+        camera: glContext.getUniformLocation(gridProgram, "u_camera[0]"),
+        portalCount: glContext.getUniformLocation(
+            gridProgram,
+            "u_portal_count"
+        ),
+        portals: glContext.getUniformLocation(gridProgram, "u_portals[0]"),
+        rings: glContext.getUniformLocation(gridProgram, "u_rings[0]"),
+        keypadFloor: glContext.getUniformLocation(
+            gridProgram,
+            "u_keypad_floor"
+        ),
+    });
+
+    const paddedPortals = new Float32Array(MAXIMUM_PORTALS * PORTAL_FLOATS);
+    const paddedRings = new Float32Array(
+        MAXIMUM_PORTALS * RING_FLOATS_PER_PORTAL
+    );
+    const asynchronousJobs = [];
+
+    let keypadProgram = null;
+    let keypadVertexArray = null;
+    let keypadUniforms = null;
+    let projectKeypadQuadFunction = null;
+
+    let portalProgram = null;
+    let portalVertexArray = null;
+    let portalUniforms = null;
+
+    let particleProgram = null;
+    let particleVertexArray = null;
+    let instanceBuffer = null;
+    let instanceCapacity = 0;
+    let particleResolutionLocation = null;
+
+    let labelProgram = null;
+    let labelVertexArray = null;
+    let labelUniforms = null;
+    let labelManager = null;
+
+    function bindUnitQuadVertexArray(shaderProgram) {
+        const vertexArray = glContext.createVertexArray();
+        if (!vertexArray) {
+            return null;
+        }
+        glContext.bindVertexArray(vertexArray);
+        glContext.bindBuffer(glContext.ARRAY_BUFFER, quadBuffer);
+        const quadLocation = glContext.getAttribLocation(
+            shaderProgram,
+            "a_quad"
+        );
+        if (quadLocation < 0) {
+            glContext.deleteVertexArray(vertexArray);
+            return null;
+        }
+        glContext.enableVertexAttribArray(quadLocation);
+        glContext.vertexAttribPointer(
+            quadLocation,
+            2,
+            glContext.FLOAT,
+            false,
+            0,
+            0
+        );
+        return vertexArray;
+    }
+
+    function renderKeypadPass(
+        viewportWidth,
+        viewportHeight,
+        devicePixelRatio,
+        cameraBuffer,
+        keypadBuffer,
+        isKeypadReady
+    ) {
+        if (!isKeypadReady) {
+            return;
+        }
+        const boundsRect = projectKeypadQuadFunction(
+            viewportWidth,
+            viewportHeight,
+            cameraBuffer,
+            keypadBuffer
+        );
+        glContext.enable(glContext.BLEND);
+        glContext.blendFunc(glContext.ONE, glContext.ONE_MINUS_SRC_ALPHA);
+        glContext.useProgram(keypadProgram);
+        glContext.bindVertexArray(keypadVertexArray);
+
+        glContext.uniform2f(
+            keypadUniforms.resolution,
+            viewportWidth,
+            viewportHeight
+        );
+        glContext.uniform1f(
+            keypadUniforms.devicePixelRatio,
+            devicePixelRatio
+        );
+        glContext.uniform4f(
+            keypadUniforms.boundsRect,
+            boundsRect[0],
+            boundsRect[1],
+            boundsRect[2],
+            boundsRect[3]
+        );
+        glContext.uniform4fv(keypadUniforms.camera, cameraBuffer);
+        glContext.uniform4fv(keypadUniforms.keypad, keypadBuffer);
+
+        glContext.drawArrays(glContext.TRIANGLES, 0, 6);
+        glContext.disable(glContext.BLEND);
+    }
+
+    function renderPortalVortexQuads(
+        viewportWidth,
+        viewportHeight,
+        devicePixelRatio,
+        cameraBuffer,
+        activePortalCount,
+        portalsBuffer,
+        ringsBuffer
+    ) {
+        glContext.useProgram(portalProgram);
+        glContext.bindVertexArray(portalVertexArray);
+        glContext.uniform2f(
+            portalUniforms.resolution,
+            viewportWidth,
+            viewportHeight
+        );
+        glContext.uniform1f(portalUniforms.devicePixelRatio, devicePixelRatio);
+        glContext.uniform4fv(portalUniforms.camera, cameraBuffer);
+
+        for (
+            let portalIndex = 0;
+            portalIndex < activePortalCount;
+            portalIndex++
+        ) {
+            const portalOffset = portalIndex * PORTAL_FLOATS;
+            const ringOffset = portalIndex * RING_FLOATS_PER_PORTAL;
+            const radiusX = portalsBuffer[portalOffset + 2];
+            const radiusY = portalsBuffer[portalOffset + 3];
+            if (radiusX <= 2.0 || radiusY <= 2.0) {
+                continue;
+            }
+            const centerX = portalsBuffer[portalOffset];
+            const centerY = portalsBuffer[portalOffset + 1];
+
+            glContext.uniform4f(
+                portalUniforms.boundsRect,
+                centerX,
+                centerY,
+                radiusX * 1.38,
+                radiusY * 1.38
+            );
+            glContext.uniform4fv(
+                portalUniforms.portal,
+                portalsBuffer.subarray(
+                    portalOffset,
+                    portalOffset + PORTAL_FLOATS
+                )
+            );
+            glContext.uniform4fv(
+                portalUniforms.rings,
+                ringsBuffer.subarray(
+                    ringOffset,
+                    ringOffset + RING_FLOATS_PER_PORTAL
+                )
+            );
+            glContext.uniform1f(
+                portalUniforms.phaseOffset,
+                portalIndex * 2.35
+            );
+            glContext.drawArrays(glContext.TRIANGLES, 0, 6);
+        }
+    }
+
+    function renderPortalParticles(
+        viewportWidth,
+        viewportHeight,
+        particleCount,
+        particlesBuffer
+    ) {
+        if (!particleProgram || particleCount <= 0 || !particlesBuffer) {
+            return;
+        }
+        glContext.blendFunc(glContext.ONE, glContext.ONE);
+        glContext.useProgram(particleProgram);
+        glContext.bindVertexArray(particleVertexArray);
+        glContext.uniform2f(
+            particleResolutionLocation,
+            viewportWidth,
+            viewportHeight
+        );
+
+        glContext.bindBuffer(glContext.ARRAY_BUFFER, instanceBuffer);
+        if (instanceCapacity < particleCount) {
+            instanceCapacity = particleCount;
+            glContext.bufferData(
+                glContext.ARRAY_BUFFER,
+                particlesBuffer.byteLength,
+                glContext.DYNAMIC_DRAW
+            );
+        }
+        glContext.bufferSubData(glContext.ARRAY_BUFFER, 0, particlesBuffer);
+        glContext.drawArraysInstanced(
+            glContext.TRIANGLES,
+            0,
+            6,
+            particleCount
+        );
+    }
+
+    function renderPortalLabels(
+        viewportWidth,
+        viewportHeight,
+        portalCount,
+        activePortalCount,
+        portalsBuffer
+    ) {
+        if (
+            !labelProgram ||
+            !labelManager ||
+            labelManager.slots.length < portalCount
+        ) {
+            return;
+        }
+        glContext.blendFunc(glContext.ONE, glContext.ONE_MINUS_SRC_ALPHA);
+        glContext.useProgram(labelProgram);
+        glContext.bindVertexArray(labelVertexArray);
+        glContext.activeTexture(glContext.TEXTURE0);
+        glContext.uniform2f(
+            labelUniforms.resolution,
+            viewportWidth,
+            viewportHeight
+        );
+        glContext.uniform1i(labelUniforms.texture, 0);
+
+        for (
+            let portalIndex = 0;
+            portalIndex < activePortalCount;
+            portalIndex++
+        ) {
+            const labelSlot = labelManager.slots[portalIndex];
+            if (!labelSlot || !labelSlot.isReady) {
+                continue;
+            }
+            const portalOffset = portalIndex * PORTAL_FLOATS;
+            const radiusY = portalsBuffer[portalOffset + 3];
+            if (radiusY <= 2.0) {
+                continue;
+            }
+            const centerX = portalsBuffer[portalOffset];
+            const centerY = portalsBuffer[portalOffset + 1];
+            const rawAlpha = portalsBuffer[portalOffset + 9];
+            const clampedAlpha = Math.min(1, Math.max(0, rawAlpha));
+
+            const halfHeight = radiusY * 0.68;
+            const halfWidth = halfHeight * labelManager.aspectRatio;
+            const labelCenterY = centerY - radiusY * 1.36;
+
+            glContext.bindTexture(glContext.TEXTURE_2D, labelSlot.texture);
+            glContext.uniform4f(
+                labelUniforms.boundsRect,
+                centerX,
+                labelCenterY,
+                halfWidth,
+                halfHeight
+            );
+            glContext.uniform1f(labelUniforms.alpha, clampedAlpha);
+            glContext.drawArrays(glContext.TRIANGLES, 0, 6);
+        }
+    }
+
+    function renderPortalsPass(
+        viewportWidth,
+        viewportHeight,
+        devicePixelRatio,
+        cameraBuffer,
+        portalCount,
+        activePortalCount,
+        portalsBuffer,
+        ringsBuffer,
+        particleCount,
+        particlesBuffer
+    ) {
+        if (activePortalCount <= 0 || !portalsBuffer || !ringsBuffer) {
+            return;
+        }
+        glContext.enable(glContext.BLEND);
+        glContext.blendFunc(glContext.ONE, glContext.ONE_MINUS_SRC_ALPHA);
+
+        renderPortalVortexQuads(
+            viewportWidth,
+            viewportHeight,
+            devicePixelRatio,
+            cameraBuffer,
+            activePortalCount,
+            portalsBuffer,
+            ringsBuffer
+        );
+        renderPortalParticles(
+            viewportWidth,
+            viewportHeight,
+            particleCount,
+            particlesBuffer
+        );
+        renderPortalLabels(
+            viewportWidth,
+            viewportHeight,
+            portalCount,
+            activePortalCount,
+            portalsBuffer
+        );
+
+        glContext.disable(glContext.BLEND);
+    }
+
+    return {
+        areEntitiesReady() {
+            if (sceneMode === SCENE_KEYPAD) {
+                return Boolean(keypadProgram);
+            }
+            if (sceneMode === SCENE_PORTALS) {
+                return Boolean(portalProgram);
+            }
+            return true;
+        },
+        attachKeypadModule(keypadModule) {
+            projectKeypadQuadFunction = keypadModule.projectKeypadQuad;
+            asynchronousJobs.push(
+                startAsynchronousProgram(
+                    glContext,
+                    parallelCompileExtension,
+                    BOUNDED_QUAD_VERTEX_SHADER,
+                    keypadModule.KEYPAD_FRAGMENT_SHADER_SOURCE,
+                    (shaderProgram) => {
+                        const vertexArray =
+                            bindUnitQuadVertexArray(shaderProgram);
+                        if (!vertexArray) {
+                            return;
+                        }
+                        keypadProgram = shaderProgram;
+                        keypadVertexArray = vertexArray;
+                        keypadUniforms = Object.assign(Object.create(null), {
+                            resolution: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_resolution"
+                            ),
+                            devicePixelRatio: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_device_pixel_ratio"
+                            ),
+                            zero: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_zero"
+                            ),
+                            boundsRect: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_bounds_rect"
+                            ),
+                            camera: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_camera[0]"
+                            ),
+                            keypad: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_keypad[0]"
+                            ),
+                        });
+                        glContext.useProgram(shaderProgram);
+                        glContext.uniform1i(keypadUniforms.zero, 0);
+                    }
+                )
+            );
+        },
+        attachPortalsModule(portalsModule) {
+            asynchronousJobs.push(
+                startAsynchronousProgram(
+                    glContext,
+                    parallelCompileExtension,
+                    BOUNDED_QUAD_VERTEX_SHADER,
+                    portalsModule.PORTAL_FRAGMENT_SHADER_SOURCE,
+                    (shaderProgram) => {
+                        const vertexArray =
+                            bindUnitQuadVertexArray(shaderProgram);
+                        if (!vertexArray) {
+                            return;
+                        }
+                        portalProgram = shaderProgram;
+                        portalVertexArray = vertexArray;
+                        portalUniforms = Object.assign(Object.create(null), {
+                            resolution: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_resolution"
+                            ),
+                            devicePixelRatio: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_device_pixel_ratio"
+                            ),
+                            zero: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_zero"
+                            ),
+                            boundsRect: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_bounds_rect"
+                            ),
+                            camera: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_camera[0]"
+                            ),
+                            portal: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_portal[0]"
+                            ),
+                            rings: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_portal_rings[0]"
+                            ),
+                            phaseOffset: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_phase_offset"
+                            ),
+                        });
+                        glContext.useProgram(shaderProgram);
+                        glContext.uniform1i(portalUniforms.zero, 0);
+                    }
+                )
+            );
+
+            asynchronousJobs.push(
+                startAsynchronousProgram(
+                    glContext,
+                    parallelCompileExtension,
+                    portalsModule.PARTICLE_VERTEX_SHADER_SOURCE,
+                    portalsModule.PARTICLE_FRAGMENT_SHADER_SOURCE,
+                    (shaderProgram) => {
+                        const vertexArray = glContext.createVertexArray();
+                        const particleInstanceBuffer =
+                            glContext.createBuffer();
+                        if (!vertexArray || !particleInstanceBuffer) {
+                            return;
+                        }
+                        glContext.bindVertexArray(vertexArray);
+                        glContext.bindBuffer(
+                            glContext.ARRAY_BUFFER,
+                            quadBuffer
+                        );
+                        const quadLocation = glContext.getAttribLocation(
+                            shaderProgram,
+                            "a_quad"
+                        );
+                        const geometryLocation = glContext.getAttribLocation(
+                            shaderProgram,
+                            "a_particle_geometry"
+                        );
+                        const appearanceLocation = glContext.getAttribLocation(
+                            shaderProgram,
+                            "a_particle_appearance"
+                        );
+                        if (
+                            quadLocation < 0 ||
+                            geometryLocation < 0 ||
+                            appearanceLocation < 0
+                        ) {
+                            return;
+                        }
+                        glContext.enableVertexAttribArray(quadLocation);
+                        glContext.vertexAttribPointer(
+                            quadLocation,
+                            2,
+                            glContext.FLOAT,
+                            false,
+                            0,
+                            0
+                        );
+
+                        glContext.bindBuffer(
+                            glContext.ARRAY_BUFFER,
+                            particleInstanceBuffer
+                        );
+                        const byteStride = PARTICLE_FLOATS * 4;
+                        glContext.enableVertexAttribArray(geometryLocation);
+                        glContext.vertexAttribPointer(
+                            geometryLocation,
+                            4,
+                            glContext.FLOAT,
+                            false,
+                            byteStride,
+                            0
+                        );
+                        glContext.vertexAttribDivisor(geometryLocation, 1);
+
+                        glContext.enableVertexAttribArray(appearanceLocation);
+                        glContext.vertexAttribPointer(
+                            appearanceLocation,
+                            4,
+                            glContext.FLOAT,
+                            false,
+                            byteStride,
+                            16
+                        );
+                        glContext.vertexAttribDivisor(appearanceLocation, 1);
+
+                        particleProgram = shaderProgram;
+                        particleVertexArray = vertexArray;
+                        instanceBuffer = particleInstanceBuffer;
+                        particleResolutionLocation =
+                            glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_resolution"
+                            );
+                    }
+                )
+            );
+
+            asynchronousJobs.push(
+                startAsynchronousProgram(
+                    glContext,
+                    parallelCompileExtension,
+                    BOUNDED_QUAD_VERTEX_SHADER,
+                    portalsModule.LABEL_FRAGMENT_SHADER_SOURCE,
+                    (shaderProgram) => {
+                        const vertexArray =
+                            bindUnitQuadVertexArray(shaderProgram);
+                        const manager =
+                            portalsModule.createLabelManager(glContext);
+                        if (!vertexArray || !manager) {
+                            return;
+                        }
+                        labelProgram = shaderProgram;
+                        labelVertexArray = vertexArray;
+                        labelManager = manager;
+                        labelUniforms = Object.assign(Object.create(null), {
+                            resolution: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_resolution"
+                            ),
+                            boundsRect: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_bounds_rect"
+                            ),
+                            texture: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_texture"
+                            ),
+                            alpha: glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_alpha"
+                            ),
+                        });
+                    }
+                )
+            );
+        },
+        pollAsynchronousJobs() {
+            let linkedAnyProgram = false;
+            for (
+                let jobIndex = 0;
+                jobIndex < asynchronousJobs.length;
+                jobIndex++
+            ) {
+                if (asynchronousJobs[jobIndex].poll()) {
+                    linkedAnyProgram = true;
+                }
+            }
+            return linkedAnyProgram;
+        },
+        synchronizeLabels(portalCount, metadataView) {
+            if (!labelManager) {
+                return;
+            }
+            labelManager.synchronize(portalCount, metadataView);
+        },
+        render(
+            viewportWidth,
+            viewportHeight,
+            devicePixelRatio,
+            cameraBuffer,
+            keypadBuffer,
+            portalCount,
+            portalsBuffer,
+            ringsBuffer,
+            particleCount,
+            particlesBuffer
+        ) {
+            if (glContext.isContextLost()) {
+                return false;
+            }
+
+            const activePortalCount = portalProgram ? portalCount : 0;
+            if (activePortalCount > 0 && portalsBuffer && ringsBuffer) {
+                paddedPortals.fill(0);
+                paddedRings.fill(0);
+                const portalFloatCount = activePortalCount * PORTAL_FLOATS;
+                paddedPortals.set(
+                    portalsBuffer.subarray(0, portalFloatCount)
+                );
+                const ringFloatCount =
+                    activePortalCount * RING_FLOATS_PER_PORTAL;
+                paddedRings.set(ringsBuffer.subarray(0, ringFloatCount));
+            }
+
+            const isKeypadReady = Boolean(
+                keypadProgram &&
+                    projectKeypadQuadFunction &&
+                    keypadBuffer &&
+                    keypadBuffer[7] > 0.5
+            );
+
+            glContext.viewport(0, 0, stage.width, stage.height);
+            glContext.disable(glContext.BLEND);
+            glContext.useProgram(gridProgram);
+            glContext.bindVertexArray(gridVertexArray);
+
+            glContext.uniform2f(
+                gridUniforms.resolution,
+                viewportWidth,
+                viewportHeight
+            );
+            glContext.uniform1f(
+                gridUniforms.devicePixelRatio,
+                devicePixelRatio
+            );
+            glContext.uniform4fv(gridUniforms.camera, cameraBuffer);
+            if (gridUniforms.portalCount !== null) {
+                glContext.uniform1i(
+                    gridUniforms.portalCount,
+                    activePortalCount
+                );
+                glContext.uniform4fv(gridUniforms.portals, paddedPortals);
+                glContext.uniform4fv(gridUniforms.rings, paddedRings);
+            }
+            if (gridUniforms.keypadFloor !== null) {
+                glContext.uniform4f(
+                    gridUniforms.keypadFloor,
+                    isKeypadReady ? keypadBuffer[0] : 0.0,
+                    isKeypadReady ? keypadBuffer[2] : 0.0,
+                    isKeypadReady ? keypadBuffer[15] : 0.0,
+                    isKeypadReady ? keypadBuffer[11] : 0.0
+                );
+            }
+
+            glContext.drawArrays(glContext.TRIANGLES, 0, 3);
+
+            renderKeypadPass(
+                viewportWidth,
+                viewportHeight,
+                devicePixelRatio,
+                cameraBuffer,
+                keypadBuffer,
+                isKeypadReady
+            );
+            renderPortalsPass(
+                viewportWidth,
+                viewportHeight,
+                devicePixelRatio,
+                cameraBuffer,
+                portalCount,
+                activePortalCount,
+                portalsBuffer,
+                ringsBuffer,
+                particleCount,
+                particlesBuffer
+            );
 
             return true;
         },
         dispose() {
             try {
-                if (labelTex) {
-                    gl.deleteTexture(labelTex);
+                if (labelManager) {
+                    labelManager.dispose();
                 }
-                if (labelVao) {
-                    gl.deleteVertexArray(labelVao);
+                for (
+                    let jobIndex = 0;
+                    jobIndex < asynchronousJobs.length;
+                    jobIndex++
+                ) {
+                    asynchronousJobs[jobIndex].dispose();
                 }
-                if (labelProg) {
-                    gl.deleteProgram(labelProg);
+                if (keypadVertexArray) {
+                    glContext.deleteVertexArray(keypadVertexArray);
                 }
-                if (instBuf) {
-                    gl.deleteBuffer(instBuf);
+                if (portalVertexArray) {
+                    glContext.deleteVertexArray(portalVertexArray);
                 }
-                if (quadBuf) {
-                    gl.deleteBuffer(quadBuf);
+                if (labelVertexArray) {
+                    glContext.deleteVertexArray(labelVertexArray);
                 }
-                if (partVao) {
-                    gl.deleteVertexArray(partVao);
+                if (particleVertexArray) {
+                    glContext.deleteVertexArray(particleVertexArray);
                 }
-                if (partProg) {
-                    gl.deleteProgram(partProg);
+                if (instanceBuffer) {
+                    glContext.deleteBuffer(instanceBuffer);
                 }
-                gl.deleteBuffer(triBuf);
-                gl.deleteVertexArray(stageVao);
-                gl.deleteProgram(stageProg);
-                const ext = gl.getExtension("WEBGL_lose_context");
-                if (ext) {
-                    ext.loseContext();
+                glContext.deleteBuffer(quadBuffer);
+                glContext.deleteBuffer(triangleBuffer);
+                glContext.deleteVertexArray(gridVertexArray);
+                glContext.deleteProgram(gridProgram);
+                const loseContextExtension =
+                    glContext.getExtension("WEBGL_lose_context");
+                if (loseContextExtension) {
+                    loseContextExtension.loseContext();
                 }
-            } catch {
-                // Ignore disposal errors during context loss.
-            }
+            } catch {}
         },
     };
 }
 
-function generateSeed() {
-    if (globalThis.crypto?.getRandomValues) {
-        const arr = new Uint32Array(1);
-        globalThis.crypto.getRandomValues(arr);
-        if (arr[0] !== 0) {
-            return arr[0];
-        }
+function readRandomCryptoSeed() {
+    if (!globalThis.crypto?.getRandomValues) {
+        return 0;
     }
-    return ((Date.now() ^ Math.floor(performance.now() * 1000)) >>> 0) || 1;
+    const seedBuffer = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(seedBuffer);
+    return seedBuffer[0];
 }
 
-async function boot() {
-    const canvas = document.getElementById("wasm-canvas");
-    if (!(canvas instanceof HTMLCanvasElement)) {
+function generateRandomSeed() {
+    const cryptoSeed = readRandomCryptoSeed();
+    if (cryptoSeed !== 0) {
+        return cryptoSeed;
+    }
+    const timestampBits =
+        (Date.now() ^ Math.floor(performance.now() * 1000)) >>> 0;
+    return timestampBits || 1;
+}
+
+function resolveSceneMode(stage) {
+    const sceneAttribute = stage.getAttribute("data-scene") || "";
+    if (
+        sceneAttribute === "portals" ||
+        stage.getAttribute("data-portal") === "1"
+    ) {
+        return SCENE_PORTALS;
+    }
+    if (sceneAttribute === "keypad") {
+        return SCENE_KEYPAD;
+    }
+    return SCENE_GRID;
+}
+
+function setupModulePrefetch(abortSignal) {
+    let isKeypadWarmed = false;
+    let isPortalsWarmed = false;
+
+    document.addEventListener(
+        "pointerover",
+        (pointerEvent) => {
+            const eventTarget = pointerEvent.target;
+            if (!(eventTarget instanceof Element)) {
+                return;
+            }
+            const anchorElement = eventTarget.closest("a[href]");
+            if (!anchorElement) {
+                return;
+            }
+            const targetHref = anchorElement.getAttribute("href") || "";
+            const isHomeRoute =
+                targetHref === "/" || /^\/(es|fr|de|ja)\/$/.test(targetHref);
+            if (isHomeRoute && !isKeypadWarmed) {
+                isKeypadWarmed = true;
+                import("./keypad.js").catch(() => null);
+                return;
+            }
+            if (targetHref.endsWith("/ugce/") && !isPortalsWarmed) {
+                isPortalsWarmed = true;
+                import("./portals.js").catch(() => null);
+            }
+        },
+        { passive: true, signal: abortSignal }
+    );
+}
+
+function readPortalFrameViews(
+    wasmExports,
+    stageRenderer,
+    portalCount,
+    particleCount
+) {
+    if (portalCount <= 0) {
+        return { portalsView: null, ringsView: null, particlesView: null };
+    }
+    const portalsView = readFloat32View(
+        wasmExports.memory,
+        wasmExports.get_portals_pointer(),
+        portalCount * PORTAL_FLOATS
+    );
+    const ringsView = readFloat32View(
+        wasmExports.memory,
+        wasmExports.get_rings_pointer(),
+        portalCount * RING_FLOATS_PER_PORTAL
+    );
+    const metadataView = readUint32View(
+        wasmExports.memory,
+        wasmExports.get_portal_metadata_pointer(),
+        portalCount * METADATA_U32S_PER_PORTAL
+    );
+    if (!portalsView || !ringsView || !metadataView) {
+        return null;
+    }
+    stageRenderer.synchronizeLabels(portalCount, metadataView);
+
+    if (particleCount <= 0) {
+        return { portalsView, ringsView, particlesView: null };
+    }
+    const particlesView = readFloat32View(
+        wasmExports.memory,
+        wasmExports.get_particles_pointer(),
+        particleCount * PARTICLE_FLOATS
+    );
+    if (!particlesView) {
+        return null;
+    }
+    return { portalsView, ringsView, particlesView };
+}
+
+function initializeStage() {
+    const stage = document.getElementById("stage");
+    if (!(stage instanceof HTMLCanvasElement)) {
         return;
     }
 
-    const stage = canvas.closest(".site-stage");
-    if (!(stage instanceof HTMLElement)) {
+    const stageContainer = stage.closest(".site-stage");
+    if (!(stageContainer instanceof HTMLElement)) {
         return;
     }
 
-    const hasPortal = canvas.getAttribute("data-portal") === "1";
-
-    let wasm;
-    try {
-        wasm = await loadVerifiedWasm();
-    } catch {
-        return;
-    }
-    if (!wasm) {
-        return;
+    const sceneMode = resolveSceneMode(stage);
+    let shaderModulePromise = null;
+    if (sceneMode === SCENE_KEYPAD) {
+        shaderModulePromise = import("./keypad.js").catch(() => null);
+    } else if (sceneMode === SCENE_PORTALS) {
+        shaderModulePromise = import("./portals.js").catch(() => null);
     }
 
-    const rawCount = wasm.get_particle_count();
-    const particleCount = hasPortal ? Math.min(256, Math.max(0, rawCount)) : 0;
-
-    const renderer = createWebGL2Renderer(canvas, hasPortal, particleCount);
-    if (!renderer) {
+    const stageRenderer = createStageRenderer(stage, sceneMode);
+    if (!stageRenderer) {
         return;
     }
 
-    const ac = new AbortController();
-    const { signal } = ac;
+    const abortController = new AbortController();
+    const abortSignal = abortController.signal;
+    setupModulePrefetch(abortSignal);
 
-    let maxDpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
-    let cssW = 1;
-    let cssH = 1;
-    let dpr = maxDpr;
-    let rafId = 0;
-    let lastTs = performance.now();
-    let revealed = false;
-    let stopped = false;
+    let maximumDevicePixelRatio = Math.min(
+        Math.max(window.devicePixelRatio || 1, 1),
+        2
+    );
+    let cssWidth = 1;
+    let cssHeight = 1;
+    let devicePixelRatio = maximumDevicePixelRatio;
+    let animationFrameId = 0;
+    let previousTimestamp = performance.now();
+    let isStopped = false;
 
-    function clampCanvasDim(px) {
-        return Math.min(MAX_CANVAS_DIM, Math.max(1, Math.round(px)));
-    }
+    let wasmExports = null;
+    let portalCount = 0;
+    let particleCount = 0;
+    let pendingPointerPosition = null;
+    const fallbackCameraBuffer = createInitialCameraBuffer();
 
-    function syncSize() {
-        if (stopped) {
+    function scheduleAnimationFrame() {
+        if (isStopped || document.hidden) {
             return;
         }
-        const rect = stage.getBoundingClientRect();
-        if (!Number.isFinite(rect.width) || !Number.isFinite(rect.height)) {
-            return;
-        }
-        cssW = Math.max(1, rect.width);
-        cssH = Math.max(1, rect.height);
-        dpr = maxDpr;
-        const targetW = clampCanvasDim(cssW * dpr);
-        const targetH = clampCanvasDim(cssH * dpr);
-        if (canvas.width !== targetW || canvas.height !== targetH) {
-            canvas.width = targetW;
-            canvas.height = targetH;
-        }
-        wasm.resize_scene(cssW, cssH);
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = requestAnimationFrame(renderAnimationFrame);
     }
 
-    const ro = new ResizeObserver(syncSize);
-
-    function shutdownToFallback() {
-        if (stopped) {
-            return;
-        }
-        stopped = true;
-        cancelAnimationFrame(rafId);
-        ac.abort();
-        ro.disconnect();
-        stage.classList.remove("site-stage--portal-hover");
-        canvas.classList.remove("wasm-canvas--ready");
-        renderer.dispose();
-    }
-
-    try {
-        const initRect = stage.getBoundingClientRect();
-        if (Number.isFinite(initRect.width)) {
-            cssW = Math.max(1, initRect.width);
-        }
-        if (Number.isFinite(initRect.height)) {
-            cssH = Math.max(1, initRect.height);
-        }
-        canvas.width = clampCanvasDim(cssW * dpr);
-        canvas.height = clampCanvasDim(cssH * dpr);
-        wasm.init_scene(cssW, cssH, hasPortal ? 1 : 0, generateSeed());
-    } catch {
-        shutdownToFallback();
-        return;
-    }
-
-    const instanceId = hasPortal ? wasm.get_instance_id() : 0;
-    const playerCount = hasPortal ? wasm.get_player_count() : 0;
-
-    ro.observe(stage);
-
-    canvas.addEventListener(
-        "webglcontextlost",
-        (e) => {
-            e.preventDefault();
-            shutdownToFallback();
-        },
-        { signal }
-    );
-
-    let activeTouchId = null;
-
-    function endTouch(pointerId) {
-        if (activeTouchId !== pointerId) {
-            return;
-        }
-        activeTouchId = null;
-        if (!stopped) {
-            wasm.pointer_leave();
-            stage.classList.remove("site-stage--portal-hover");
-        }
-    }
-
-    canvas.addEventListener(
-        "touchmove",
-        (e) => {
-            if (activeTouchId !== null && e.cancelable) {
-                e.preventDefault();
-            }
-        },
-        { passive: false, signal }
-    );
-
-    canvas.addEventListener(
-        "pointerdown",
-        (e) => {
-            if (stopped || e.pointerType !== "touch") {
-                return;
-            }
-            if (activeTouchId !== null) {
-                return;
-            }
-            if (!Number.isFinite(e.clientX) || !Number.isFinite(e.clientY)) {
-                return;
-            }
-            activeTouchId = e.pointerId;
-            try {
-                canvas.setPointerCapture(e.pointerId);
-            } catch {
-                // Ignore if synthetic pointer cannot be captured.
-            }
-            const rect = stage.getBoundingClientRect();
-            wasm.pointer_move(e.clientX - rect.left, e.clientY - rect.top);
-        },
-        { passive: true, signal }
-    );
-
-    stage.addEventListener(
-        "pointermove",
-        (e) => {
-            if (stopped) {
-                return;
-            }
-            if (!Number.isFinite(e.clientX) || !Number.isFinite(e.clientY)) {
-                return;
-            }
-            if (e.pointerType === "touch" && e.pointerId !== activeTouchId) {
-                return;
-            }
-            const rect = stage.getBoundingClientRect();
-            wasm.pointer_move(e.clientX - rect.left, e.clientY - rect.top);
-        },
-        { passive: true, signal }
-    );
-
-    canvas.addEventListener(
-        "pointerup",
-        (e) => {
-            if (e.pointerType === "touch") {
-                endTouch(e.pointerId);
-            }
-        },
-        { passive: true, signal }
-    );
-
-    canvas.addEventListener(
-        "pointercancel",
-        (e) => {
-            if (e.pointerType === "touch") {
-                endTouch(e.pointerId);
-            }
-        },
-        { passive: true, signal }
-    );
-
-    canvas.addEventListener(
-        "lostpointercapture",
-        (e) => {
-            endTouch(e.pointerId);
-        },
-        { passive: true, signal }
-    );
-
-    stage.addEventListener(
-        "pointerleave",
-        (e) => {
-            if (e.pointerType === "touch") {
-                return;
-            }
-            if (!stopped) {
-                wasm.pointer_leave();
-                stage.classList.remove("site-stage--portal-hover");
-            }
-        },
-        { passive: true, signal }
-    );
-
-    if (hasPortal) {
-        const rawHref = canvas.getAttribute("data-portal-href") || "";
-        stage.addEventListener(
-            "click",
-            (e) => {
-                if (stopped || e.button !== 0) {
-                    return;
-                }
-                const validX = Number.isFinite(e.clientX);
-                const validY = Number.isFinite(e.clientY);
-                if (!validX || !validY) {
-                    return;
-                }
-                const rect = stage.getBoundingClientRect();
-                const px = e.clientX - rect.left;
-                const py = e.clientY - rect.top;
-                const hit = wasm.click_portal(px, py) !== 0;
-                const safePath =
-                    rawHref.startsWith("/") && !rawHref.startsWith("//");
-                if (hit && safePath) {
-                    window.location.assign(rawHref);
-                }
-            },
-            { passive: true, signal }
+    function clampStageDimension(pixelSize) {
+        return Math.min(
+            MAXIMUM_STAGE_DIMENSION,
+            Math.max(1, Math.round(pixelSize))
         );
     }
 
-    const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    const motionScale = mq?.matches ? 0.0 : 1.0;
+    function measureStageContainer() {
+        const containerBounds = stageContainer.getBoundingClientRect();
+        if (
+            Number.isFinite(containerBounds.width) &&
+            containerBounds.width > 0
+        ) {
+            cssWidth = Math.max(1, containerBounds.width);
+        }
+        if (
+            Number.isFinite(containerBounds.height) &&
+            containerBounds.height > 0
+        ) {
+            cssHeight = Math.max(1, containerBounds.height);
+        }
+        devicePixelRatio = maximumDevicePixelRatio;
+        const targetWidth = clampStageDimension(cssWidth * devicePixelRatio);
+        const targetHeight = clampStageDimension(cssHeight * devicePixelRatio);
+        if (stage.width !== targetWidth || stage.height !== targetHeight) {
+            stage.width = targetWidth;
+            stage.height = targetHeight;
+        }
+    }
 
-    function frame(now) {
-        if (stopped) {
+    measureStageContainer();
+    if (
+        stageRenderer.render(
+            cssWidth,
+            cssHeight,
+            devicePixelRatio,
+            fallbackCameraBuffer,
+            null,
+            0,
+            null,
+            null,
+            0,
+            null
+        )
+    ) {
+        stage.classList.add("stage--ready");
+    }
+
+    function attachLoadedShaderModule(shaderModule) {
+        if (isStopped || !shaderModule) {
+            return;
+        }
+        if (sceneMode === SCENE_KEYPAD) {
+            stageRenderer.attachKeypadModule(shaderModule);
+        } else if (sceneMode === SCENE_PORTALS) {
+            stageRenderer.attachPortalsModule(shaderModule);
+        }
+        scheduleAnimationFrame();
+    }
+
+    if (shaderModulePromise) {
+        shaderModulePromise.then(attachLoadedShaderModule);
+    }
+
+    function attachLoadedWasm(loadedExports) {
+        if (isStopped || !loadedExports) {
             return;
         }
         try {
-            const safeNow = Number.isFinite(now) ? now : lastTs + 16;
-            const elapsedSec = (safeNow - lastTs) / 1000;
-            const dt = Math.min(0.1, Math.max(0.0005, elapsedSec));
-            lastTs = safeNow;
+            loadedExports.initialize_scene(
+                cssWidth,
+                cssHeight,
+                sceneMode,
+                generateRandomSeed()
+            );
+            const rawPortalCount = loadedExports.get_portal_count();
+            portalCount = Math.min(
+                MAXIMUM_PORTALS,
+                Math.max(0, rawPortalCount)
+            );
+            const rawParticleCount = loadedExports.get_particle_count();
+            particleCount =
+                portalCount > 0
+                    ? Math.min(512, Math.max(0, rawParticleCount))
+                    : 0;
+            if (pendingPointerPosition) {
+                loadedExports.pointer_move(
+                    pendingPointerPosition[0],
+                    pendingPointerPosition[1]
+                );
+            }
+            wasmExports = loadedExports;
+            scheduleAnimationFrame();
+        } catch {
+            shutdownToFallback();
+        }
+    }
 
-            const tier = wasm.step_scene(dt, motionScale);
-            if (tier === 1 && maxDpr > 1) {
-                maxDpr = 1;
-                syncSize();
-            } else if (tier >= 2) {
-                shutdownToFallback();
+    INITIAL_WASM_PROMISE.then(attachLoadedWasm);
+
+    function synchronizeStageSize() {
+        if (isStopped) {
+            return;
+        }
+        measureStageContainer();
+        if (wasmExports) {
+            wasmExports.resize_scene(cssWidth, cssHeight);
+        }
+    }
+
+    const resizeObserver = new ResizeObserver(synchronizeStageSize);
+
+    function shutdownToFallback() {
+        if (isStopped) {
+            return;
+        }
+        isStopped = true;
+        cancelAnimationFrame(animationFrameId);
+        abortController.abort();
+        resizeObserver.disconnect();
+        stageContainer.classList.remove("site-stage--interactive-hover");
+        stage.classList.remove("stage--ready");
+        stageRenderer.dispose();
+    }
+
+    resizeObserver.observe(stageContainer);
+
+    stage.addEventListener(
+        "webglcontextlost",
+        (contextEvent) => {
+            contextEvent.preventDefault();
+            shutdownToFallback();
+        },
+        { signal: abortSignal }
+    );
+
+    let activeTouchPointerId = null;
+
+    function sendPointerMove(pointerX, pointerY) {
+        pendingPointerPosition = [pointerX, pointerY];
+        if (wasmExports) {
+            wasmExports.pointer_move(pointerX, pointerY);
+        }
+    }
+
+    function sendPointerLeave() {
+        pendingPointerPosition = null;
+        if (wasmExports) {
+            wasmExports.pointer_leave();
+        }
+        stageContainer.classList.remove("site-stage--interactive-hover");
+    }
+
+    function endTouchInteraction(pointerId) {
+        if (activeTouchPointerId !== pointerId) {
+            return;
+        }
+        activeTouchPointerId = null;
+        if (isStopped) {
+            return;
+        }
+        sendPointerLeave();
+    }
+
+    stage.addEventListener(
+        "touchmove",
+        (touchEvent) => {
+            if (activeTouchPointerId === null || !touchEvent.cancelable) {
                 return;
             }
+            touchEvent.preventDefault();
+        },
+        { passive: false, signal: abortSignal }
+    );
 
-            if (hasPortal) {
-                const sec = wasm.get_countdown_sec();
-                renderer.updateLabel(instanceId, playerCount, sec);
-                const hovered = wasm.is_portal_hovered() !== 0;
-                stage.classList.toggle("site-stage--portal-hover", hovered);
+    stage.addEventListener(
+        "pointerdown",
+        (pointerEvent) => {
+            if (isStopped || pointerEvent.pointerType !== "touch") {
+                return;
             }
-
-            const camPtr = wasm.get_camera_ptr();
-            const portalPtr = wasm.get_portal_ptr();
-            const ringsPtr = wasm.get_rings_ptr();
-            const camView = readF32View(wasm.memory, camPtr, CAM_FLOATS);
-            const portalView = readF32View(
-                wasm.memory,
-                portalPtr,
-                PORTAL_FLOATS
+            if (activeTouchPointerId !== null) {
+                return;
+            }
+            if (
+                !Number.isFinite(pointerEvent.clientX) ||
+                !Number.isFinite(pointerEvent.clientY)
+            ) {
+                return;
+            }
+            activeTouchPointerId = pointerEvent.pointerId;
+            try {
+                stage.setPointerCapture(pointerEvent.pointerId);
+            } catch {}
+            const containerBounds = stageContainer.getBoundingClientRect();
+            sendPointerMove(
+                pointerEvent.clientX - containerBounds.left,
+                pointerEvent.clientY - containerBounds.top
             );
-            const ringView = readF32View(wasm.memory, ringsPtr, RING_FLOATS);
+        },
+        { passive: true, signal: abortSignal }
+    );
 
-            let partView = null;
-            if (hasPortal && particleCount > 0) {
-                const partPtr = wasm.get_particles_ptr();
-                const partLen = particleCount * PARTICLE_FLOATS;
-                partView = readF32View(wasm.memory, partPtr, partLen);
-                if (!partView) {
-                    shutdownToFallback();
+    stageContainer.addEventListener(
+        "pointermove",
+        (pointerEvent) => {
+            if (isStopped) {
+                return;
+            }
+            if (
+                !Number.isFinite(pointerEvent.clientX) ||
+                !Number.isFinite(pointerEvent.clientY)
+            ) {
+                return;
+            }
+            if (
+                pointerEvent.pointerType === "touch" &&
+                pointerEvent.pointerId !== activeTouchPointerId
+            ) {
+                return;
+            }
+            const containerBounds = stageContainer.getBoundingClientRect();
+            sendPointerMove(
+                pointerEvent.clientX - containerBounds.left,
+                pointerEvent.clientY - containerBounds.top
+            );
+        },
+        { passive: true, signal: abortSignal }
+    );
+
+    stage.addEventListener(
+        "pointerup",
+        (pointerEvent) => {
+            if (pointerEvent.pointerType !== "touch") {
+                return;
+            }
+            endTouchInteraction(pointerEvent.pointerId);
+        },
+        { passive: true, signal: abortSignal }
+    );
+
+    stage.addEventListener(
+        "pointercancel",
+        (pointerEvent) => {
+            if (pointerEvent.pointerType !== "touch") {
+                return;
+            }
+            endTouchInteraction(pointerEvent.pointerId);
+        },
+        { passive: true, signal: abortSignal }
+    );
+
+    stage.addEventListener(
+        "lostpointercapture",
+        (pointerEvent) => {
+            endTouchInteraction(pointerEvent.pointerId);
+        },
+        { passive: true, signal: abortSignal }
+    );
+
+    stageContainer.addEventListener(
+        "pointerleave",
+        (pointerEvent) => {
+            if (isStopped || pointerEvent.pointerType === "touch") {
+                return;
+            }
+            sendPointerLeave();
+        },
+        { passive: true, signal: abortSignal }
+    );
+
+    function registerStageClickNavigation() {
+        if (sceneMode === SCENE_GRID) {
+            return;
+        }
+        const targetHref =
+            stage.getAttribute("data-target-href") ||
+            stage.getAttribute("data-portal-href") ||
+            "";
+        stageContainer.addEventListener(
+            "click",
+            (clickEvent) => {
+                if (isStopped || !wasmExports || clickEvent.button !== 0) {
                     return;
                 }
-            }
+                const validClientX = Number.isFinite(clickEvent.clientX);
+                const validClientY = Number.isFinite(clickEvent.clientY);
+                if (!validClientX || !validClientY) {
+                    return;
+                }
+                const containerBounds = stageContainer.getBoundingClientRect();
+                const stageX = clickEvent.clientX - containerBounds.left;
+                const stageY = clickEvent.clientY - containerBounds.top;
+                const hitEntityIndex = wasmExports.click_stage(stageX, stageY);
+                const isSafeRelativePath =
+                    targetHref.startsWith("/") && !targetHref.startsWith("//");
+                if (hitEntityIndex < 0 || !isSafeRelativePath) {
+                    return;
+                }
+                window.location.assign(targetHref);
+            },
+            { passive: true, signal: abortSignal }
+        );
+    }
 
-            if (!camView || !portalView || !ringView) {
-                shutdownToFallback();
-                return;
-            }
-            const ok = renderer.render(
-                cssW,
-                cssH,
-                dpr,
-                camView,
-                portalView,
-                ringView,
-                partView
+    registerStageClickNavigation();
+
+    const motionScale = 1.0;
+
+    function renderFallbackGridFrame(deltaSeconds) {
+        fallbackCameraBuffer[7] =
+            (fallbackCameraBuffer[7] + deltaSeconds * 0.85 * motionScale) %
+            MAJOR_GRID_STEP;
+        const renderedGrid = stageRenderer.render(
+            cssWidth,
+            cssHeight,
+            devicePixelRatio,
+            fallbackCameraBuffer,
+            null,
+            0,
+            null,
+            null,
+            0,
+            null
+        );
+        if (!renderedGrid) {
+            shutdownToFallback();
+            return;
+        }
+        scheduleAnimationFrame();
+    }
+
+    function renderAnimationFrame(currentTimestamp) {
+        if (isStopped) {
+            return;
+        }
+        try {
+            const safeTimestamp = Number.isFinite(currentTimestamp)
+                ? currentTimestamp
+                : previousTimestamp + 16;
+            const elapsedSeconds = (safeTimestamp - previousTimestamp) / 1000;
+            const deltaSeconds = Math.min(
+                0.1,
+                Math.max(0.0005, elapsedSeconds)
             );
-            if (!ok) {
+            previousTimestamp = safeTimestamp;
+
+            stageRenderer.pollAsynchronousJobs();
+
+            if (!wasmExports) {
+                renderFallbackGridFrame(deltaSeconds);
+                return;
+            }
+
+            const entitiesReady = stageRenderer.areEntitiesReady() ? 1 : 0;
+            const qualityTier = wasmExports.step_scene(
+                deltaSeconds,
+                motionScale,
+                entitiesReady
+            );
+            if (qualityTier >= 1 && maximumDevicePixelRatio > 1) {
+                maximumDevicePixelRatio = 1;
+                synchronizeStageSize();
+            }
+
+            if (sceneMode !== SCENE_GRID) {
+                const isHovered = wasmExports.is_interactive_hovered() !== 0;
+                stageContainer.classList.toggle(
+                    "site-stage--interactive-hover",
+                    isHovered
+                );
+            }
+
+            const cameraView = readFloat32View(
+                wasmExports.memory,
+                wasmExports.get_camera_pointer(),
+                CAMERA_FLOATS
+            );
+            const keypadView = readFloat32View(
+                wasmExports.memory,
+                wasmExports.get_keypad_pointer(),
+                KEYPAD_FLOATS
+            );
+            const portalViews = readPortalFrameViews(
+                wasmExports,
+                stageRenderer,
+                portalCount,
+                particleCount
+            );
+            if (!cameraView || !keypadView || !portalViews) {
                 shutdownToFallback();
                 return;
             }
 
-            if (!revealed) {
-                revealed = true;
-                canvas.classList.add("wasm-canvas--ready");
+            const renderedScene = stageRenderer.render(
+                cssWidth,
+                cssHeight,
+                devicePixelRatio,
+                cameraView,
+                keypadView,
+                portalCount,
+                portalViews.portalsView,
+                portalViews.ringsView,
+                particleCount,
+                portalViews.particlesView
+            );
+            if (!renderedScene) {
+                shutdownToFallback();
+                return;
             }
 
-            if (!document.hidden) {
-                rafId = requestAnimationFrame(frame);
-            }
+            scheduleAnimationFrame();
         } catch {
             shutdownToFallback();
         }
@@ -1355,20 +1919,32 @@ async function boot() {
     document.addEventListener(
         "visibilitychange",
         () => {
-            if (stopped) {
+            if (isStopped) {
                 return;
             }
             if (document.hidden) {
-                cancelAnimationFrame(rafId);
-            } else {
-                lastTs = performance.now();
-                rafId = requestAnimationFrame(frame);
+                cancelAnimationFrame(animationFrameId);
+                return;
             }
+            previousTimestamp = performance.now();
+            scheduleAnimationFrame();
         },
-        { passive: true, signal }
+        { passive: true, signal: abortSignal }
     );
 
-    rafId = requestAnimationFrame(frame);
+    window.addEventListener(
+        "pageshow",
+        () => {
+            if (isStopped || document.hidden) {
+                return;
+            }
+            previousTimestamp = performance.now();
+            scheduleAnimationFrame();
+        },
+        { passive: true, signal: abortSignal }
+    );
+
+    scheduleAnimationFrame();
 }
 
-boot();
+initializeStage();
