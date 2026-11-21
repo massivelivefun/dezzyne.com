@@ -625,3 +625,83 @@ a {
     max-height: 9.8rem;
   }
 }
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .banner-inner,
+  .site-footer .banner-inner {
+    min-height: 2.4rem;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+  }
+
+  .site-logo {
+    font-size: 1.15rem;
+  }
+
+  .header-nav {
+    font-size: 0.82rem;
+    gap: 0.9rem;
+  }
+
+  .footer-copy {
+    font-size: 0.72rem;
+  }
+
+  .site-main {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .site-stage .page-title {
+    position: absolute;
+    right: clamp(1rem, 3vw, 2.5rem);
+    bottom: 0;
+    margin: 0;
+    font-size: clamp(3.25rem, 22vh, 5.5rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: rgba(255, 255, 255, 0.09);
+    white-space: nowrap;
+    text-align: right;
+    text-box-trim: trim-both;
+    text-box-edge: cap alphabetic;
+    transform: translateY(2%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .about-body,
+  .contact-body {
+    margin-top: auto;
+    margin-bottom: auto;
+  }
+
+  .about-headline,
+  .contact-body .about-headline {
+    font-size: clamp(1.25rem, 6vh, 1.65rem);
+    margin-bottom: 0.5rem;
+  }
+
+  .about-copy,
+  .contact-intro {
+    font-size: 0.92rem;
+    line-height: 1.45;
+    margin-bottom: 0.75rem;
+  }
+
+  .about-pillars {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.65rem 1.5rem;
+  }
+
+  .accent-link {
+    font-size: 1rem;
+  }
+
+  .form-field textarea {
+    min-height: 4.2rem;
+    max-height: 7rem;
+  }
+}

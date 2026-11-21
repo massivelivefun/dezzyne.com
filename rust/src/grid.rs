@@ -34,6 +34,7 @@ pub struct GridCamera {
     cursor_glow: Spring,
     scroll_offset_z: f32,
     release_hold_seconds: f32,
+    tangent_half_fov: f32,
     camera_buffer: [f32; CAMERA_FLOATS],
 }
 
@@ -57,8 +58,17 @@ impl GridCamera {
             cursor_glow: Spring::new(0.0),
             scroll_offset_z: 0.0,
             release_hold_seconds: 0.0,
+            tangent_half_fov: TANGENT_HALF_FOV,
             camera_buffer: [0.0; CAMERA_FLOATS],
         }
+    }
+
+    fn compute_wide_framing(safe_viewport: Vec2) -> f32 {
+        let aspect_ratio = safe_viewport.x / safe_viewport.y;
+        let aspect_wideness = ((aspect_ratio - 2.35) / 1.45).clamp(0.0, 1.0);
+        let short_height = ((440.0 - safe_viewport.y) / 180.0).clamp(0.0, 1.0);
+        let landscape_gate = ((aspect_ratio - 1.40) / 0.60).clamp(0.0, 1.0);
+        aspect_wideness.max(short_height * landscape_gate)
     }
 
     pub fn basis_from_angles(
@@ -77,6 +87,7 @@ impl GridCamera {
         pointer_position: Vec2,
         pointer_active: bool,
         narrowness: f32,
+        base_pitch: f32,
     ) {
         if pointer_active {
             self.release_hold_seconds = narrowness * 0.50;
@@ -91,7 +102,8 @@ impl GridCamera {
                 normalized_pointer.x * horizontal_pan_range;
             self.camera_position_y.target = -normalized_pointer.y * 0.20;
             self.camera_yaw.target = normalized_pointer.x * yaw_range;
-            self.camera_pitch.target = -0.14 - normalized_pointer.y * 0.052;
+            self.camera_pitch.target =
+                base_pitch - normalized_pointer.y * 0.052;
             self.camera_roll.target = -normalized_pointer.x * 0.018;
             return;
         }
@@ -105,7 +117,7 @@ impl GridCamera {
         self.camera_position_x.target = 0.0;
         self.camera_position_y.target = 0.0;
         self.camera_yaw.target = 0.0;
-        self.camera_pitch.target = -0.14;
+        self.camera_pitch.target = base_pitch;
         self.camera_roll.target = 0.0;
     }
 
@@ -169,6 +181,9 @@ impl GridCamera {
         let safe_viewport = viewport_size.max(Vec2::ONE);
         let aspect_ratio = safe_viewport.x / safe_viewport.y;
         let narrowness = ((1.35 - aspect_ratio) / 0.85).clamp(0.0, 1.0);
+        let wide_framing = Self::compute_wide_framing(safe_viewport);
+        let base_pitch = -0.14 + wide_framing * 0.042;
+        self.tangent_half_fov = TANGENT_HALF_FOV - wide_framing * 0.20;
 
         self.update_camera_targets(
             delta_seconds,
@@ -176,6 +191,7 @@ impl GridCamera {
             pointer_position,
             pointer_active,
             narrowness,
+            base_pitch,
         );
         self.apply_camera_springs(
             delta_seconds,
@@ -205,7 +221,7 @@ impl GridCamera {
         self.camera_buffer[0] = self.camera_position.x;
         self.camera_buffer[1] = self.camera_position.y;
         self.camera_buffer[2] = self.camera_position.z;
-        self.camera_buffer[3] = TANGENT_HALF_FOV;
+        self.camera_buffer[3] = self.tangent_half_fov;
 
         self.camera_buffer[4] = forward.x;
         self.camera_buffer[5] = forward.y;
@@ -232,10 +248,10 @@ impl GridCamera {
         let half_height = (safe_viewport.y * 0.5).max(1.0);
         let horizontal_tangent =
             ((screen_point.x - safe_viewport.x * 0.5) / half_height)
-                * TANGENT_HALF_FOV;
+                * self.tangent_half_fov;
         let vertical_tangent =
             ((safe_viewport.y * 0.5 - screen_point.y) / half_height)
-                * TANGENT_HALF_FOV;
+                * self.tangent_half_fov;
         let unnormalized_ray = self.camera_forward
             + self.camera_right * horizontal_tangent
             + self.camera_up * vertical_tangent;
@@ -398,7 +414,7 @@ impl GridCamera {
         let camera_y = camera_relative.dot(self.camera_up);
         let camera_depth = camera_relative.dot(self.camera_forward).max(1.0);
 
-        let focal_length = (safe_viewport.y * 0.5) / TANGENT_HALF_FOV;
+        let focal_length = (safe_viewport.y * 0.5) / self.tangent_half_fov;
         let projection_scale = focal_length / camera_depth;
         let screen_position = Vec2::new(
             safe_viewport.x * 0.5 + camera_x * projection_scale,

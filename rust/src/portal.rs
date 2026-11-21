@@ -353,12 +353,13 @@ impl PortalEntity {
             };
 
             let output_offset = particle_index * PARTICLE_FLOATS;
+            let particle_scale = (base_radius_y / 141.0).clamp(0.30, 1.60);
             particle_output[output_offset] = screen_position.x;
             particle_output[output_offset + 1] = screen_position.y;
             particle_output[output_offset + 2] = inward_direction.x;
             particle_output[output_offset + 3] = inward_direction.y;
             particle_output[output_offset + 4] =
-                particle.radius_pixels * portal_scale;
+                particle.radius_pixels * particle_scale;
             particle_output[output_offset + 5] = stretch_factor;
             particle_output[output_offset + 6] = particle_alpha;
             particle_output[output_offset + 7] = tint_code;

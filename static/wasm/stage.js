@@ -556,20 +556,44 @@ function startAsynchronousProgram(
     };
 }
 
-function createInitialCameraBuffer() {
-    const cameraBuffer = new Float32Array(CAMERA_FLOATS);
-    const initialPitch = -0.14;
+function applyFallbackWideFraming(
+    cameraBuffer,
+    viewportWidth,
+    viewportHeight
+) {
+    const safeWidth = Math.max(1, viewportWidth);
+    const safeHeight = Math.max(1, viewportHeight);
+    const aspectRatio = safeWidth / safeHeight;
+    const aspectWideness = Math.min(
+        1,
+        Math.max(0, (aspectRatio - 2.35) / 1.45)
+    );
+    const shortHeightFactor = Math.min(
+        1,
+        Math.max(0, (440 - safeHeight) / 180)
+    );
+    const landscapeGate = Math.min(1, Math.max(0, (aspectRatio - 1.4) / 0.6));
+    const wideFraming = Math.max(
+        aspectWideness,
+        shortHeightFactor * landscapeGate
+    );
+    const initialPitch = -0.14 + wideFraming * 0.042;
     const pitchSine = Math.sin(initialPitch);
     const pitchCosine = Math.cos(initialPitch);
-    cameraBuffer[3] = 0.58;
+    cameraBuffer[3] = 0.58 - wideFraming * 0.2;
     cameraBuffer[5] = pitchSine;
     cameraBuffer[6] = pitchCosine;
-    cameraBuffer[8] = 1.0;
-    cameraBuffer[11] = -1.55;
     cameraBuffer[13] = pitchCosine;
     cameraBuffer[14] = -pitchSine;
+}
+
+function createInitialCameraBuffer() {
+    const cameraBuffer = new Float32Array(CAMERA_FLOATS);
+    cameraBuffer[8] = 1.0;
+    cameraBuffer[11] = -1.55;
     cameraBuffer[17] = 8.0;
     cameraBuffer[18] = -1.0;
+    applyFallbackWideFraming(cameraBuffer, 1280, 720);
     return cameraBuffer;
 }
 
@@ -1542,6 +1566,7 @@ function initializeStage() {
             stage.width = targetWidth;
             stage.height = targetHeight;
         }
+        applyFallbackWideFraming(fallbackCameraBuffer, cssWidth, cssHeight);
     }
 
     measureStageContainer();
