@@ -1,0 +1,14 @@
+{
+  "name": "dezzyne-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node scripts/build-ts.ts",
+    "watch": "node scripts/build-ts.ts --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.0"
+  }
+}
