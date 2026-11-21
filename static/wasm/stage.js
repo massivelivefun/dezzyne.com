@@ -1784,7 +1784,7 @@ function initializeStage() {
         if (sceneMode === SCENE_GRID) {
             return;
         }
-        const targetHref =
+        const defaultHref =
             stage.getAttribute("data-target-href") ||
             stage.getAttribute("data-portal-href") ||
             "";
@@ -1803,9 +1803,15 @@ function initializeStage() {
                 const stageX = clickEvent.clientX - containerBounds.left;
                 const stageY = clickEvent.clientY - containerBounds.top;
                 const hitEntityIndex = wasmExports.click_stage(stageX, stageY);
+                if (hitEntityIndex < 0) {
+                    return;
+                }
+                const entityAttr = `data-portal-${hitEntityIndex}-href`;
+                const targetHref =
+                    stage.getAttribute(entityAttr) || defaultHref;
                 const isSafeRelativePath =
                     targetHref.startsWith("/") && !targetHref.startsWith("//");
-                if (hitEntityIndex < 0 || !isSafeRelativePath) {
+                if (!isSafeRelativePath) {
                     return;
                 }
                 window.location.assign(targetHref);
