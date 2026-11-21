@@ -1708,7 +1708,76 @@ function initializeStage() {
     let activeTouchPointerId = null;
     let touchStartX = 0;
     let touchStartY = 0;
+    let previousTouchX = 0;
+    let previousTouchY = 0;
+    let touchNormalizedX = 0;
+    let touchNormalizedY = 0;
     let isTouchDragging = false;
+
+    function clampSignedUnit(rawValue) {
+        return Math.min(1, Math.max(-1, rawValue));
+    }
+
+    function readCurrentCameraNormalized() {
+        if (!wasmExports) {
+            return [0, 0];
+        }
+        const cameraView = readFloat32View(
+            wasmExports.memory,
+            wasmExports.get_camera_pointer(),
+            CAMERA_FLOATS
+        );
+        if (!cameraView) {
+            return [0, 0];
+        }
+        const safeWidth = Math.max(1, cssWidth);
+        const safeHeight = Math.max(1, cssHeight);
+        const aspectRatio = safeWidth / safeHeight;
+        const narrowness = Math.min(
+            1,
+            Math.max(0, (1.35 - aspectRatio) / 0.85)
+        );
+        const horizontalPanRange = 0.52 + narrowness * 1.78;
+        return [
+            clampSignedUnit(cameraView[0] / horizontalPanRange),
+            clampSignedUnit(-cameraView[1] / 0.2),
+        ];
+    }
+
+    function handleTouchSwipeMove(pointerEvent) {
+        if (pointerEvent.pointerId !== activeTouchPointerId) {
+            return;
+        }
+        const totalDeltaX = pointerEvent.clientX - touchStartX;
+        const totalDeltaY = pointerEvent.clientY - touchStartY;
+        const movedDistanceSquared =
+            totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY;
+        if (!isTouchDragging && movedDistanceSquared < 36) {
+            return;
+        }
+        if (!isTouchDragging) {
+            isTouchDragging = true;
+            previousTouchX = pointerEvent.clientX;
+            previousTouchY = pointerEvent.clientY;
+            const currentNormalized = readCurrentCameraNormalized();
+            touchNormalizedX = currentNormalized[0];
+            touchNormalizedY = currentNormalized[1];
+        }
+        const safeWidth = Math.max(1, cssWidth);
+        const safeHeight = Math.max(1, cssHeight);
+        const stepX =
+            ((pointerEvent.clientX - previousTouchX) / safeWidth) * 2;
+        const stepY =
+            ((pointerEvent.clientY - previousTouchY) / safeHeight) * 2;
+        previousTouchX = pointerEvent.clientX;
+        previousTouchY = pointerEvent.clientY;
+        touchNormalizedX = clampSignedUnit(touchNormalizedX + stepX);
+        touchNormalizedY = clampSignedUnit(touchNormalizedY + stepY);
+        sendPointerMove(
+            (touchNormalizedX * 0.5 + 0.5) * safeWidth,
+            (touchNormalizedY * 0.5 + 0.5) * safeHeight
+        );
+    }
 
     function sendPointerMove(pointerX, pointerY) {
         pendingPointerPosition = [pointerX, pointerY];
@@ -1827,27 +1896,15 @@ function initializeStage() {
             ) {
                 return;
             }
-            const isTouch = pointerEvent.pointerType === "touch";
-            if (isTouch && pointerEvent.pointerId !== activeTouchPointerId) {
+            if (pointerEvent.pointerType === "touch") {
+                handleTouchSwipeMove(pointerEvent);
                 return;
-            }
-            const deltaX = pointerEvent.clientX - touchStartX;
-            const deltaY = pointerEvent.clientY - touchStartY;
-            const movedDistanceSquared = deltaX * deltaX + deltaY * deltaY;
-            if (isTouch && !isTouchDragging && movedDistanceSquared < 36) {
-                return;
-            }
-            if (isTouch) {
-                isTouchDragging = true;
             }
             const containerBounds = stageContainer.getBoundingClientRect();
             sendPointerMove(
                 pointerEvent.clientX - containerBounds.left,
                 pointerEvent.clientY - containerBounds.top
             );
-            if (isTouch) {
-                return;
-            }
             isMousePointerActive = isDirectStageTarget(pointerEvent.target);
             synchronizeStageLink();
         },
