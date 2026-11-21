@@ -1,6 +1,8 @@
-# Zola and Rust build outputs
+# Zola, Rust, and TypeScript build outputs
 /public/
 /rust/target/
+/static/wasm/*.js
+/static/wasm/skyboxes/
 
 # Local CLI and tooling state
 /.netlify/
