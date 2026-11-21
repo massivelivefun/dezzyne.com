@@ -181,12 +181,6 @@ a {
     padding-bottom: 2rem;
   }
 
-  .site-main:has(.about-body),
-  .site-main:has(.contact-form) {
-    margin-top: max(0px, calc(50vh - 23.125rem));
-    margin-bottom: auto;
-  }
-
   .site-main > :not(.page-title) {
     position: relative;
     z-index: 2;
@@ -406,7 +400,8 @@ a {
 .form-field textarea {
   resize: vertical;
   min-height: 9rem;
-  max-height: 16rem;
+  max-height: max(9rem, calc(100vh - 39.5rem));
+  max-height: max(9rem, calc(100svh - 39.5rem));
   overflow-y: auto;
 }
 
