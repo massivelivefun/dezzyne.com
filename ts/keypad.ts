@@ -1,6 +1,40 @@
-export const KEYPAD_FLOATS = 16;
+import {
+    GLSL_CAMERA_RAY_LIB,
+    GLSL_NOISE_LIB,
+    KEYPAD_FLOATS,
+    asCssPixels,
+    asGlslSource,
+    asMillimeters,
+    asWorldUnits,
+    projectPointToCameraSpace,
+    type CameraSpaceTuple,
+    type CameraUniformBuffer,
+    type CssPixels,
+    type ElementCount,
+    type GlslSource,
+    type KeypadUniformBuffer,
+    type Millimeters,
+    type QuadBoundsTuple,
+    type WorldUnits,
+} from "./shader-lib.ts";
 
-export const KEYPAD_FRAGMENT_SHADER_SOURCE = `#version 300 es
+const { Math } = globalThis;
+
+export { KEYPAD_FLOATS };
+
+export interface KeypadShaderModule {
+    readonly KEYPAD_FLOATS: ElementCount;
+    readonly KEYPAD_FRAGMENT_SHADER_SOURCE: GlslSource;
+    projectKeypadQuad(
+        viewportWidth: CssPixels,
+        viewportHeight: CssPixels,
+        cameraBuffer: CameraUniformBuffer,
+        keypadBuffer: KeypadUniformBuffer
+    ): QuadBoundsTuple;
+}
+
+export const KEYPAD_FRAGMENT_SHADER_SOURCE: GlslSource = asGlslSource(
+    `#version 300 es
 precision highp float;
 
 uniform vec2 u_resolution;
@@ -8,31 +42,10 @@ uniform float u_device_pixel_ratio;
 uniform int u_zero;
 uniform vec4 u_camera[5];
 uniform vec4 u_keypad[4];
+uniform float u_light_mode;
 
 out vec4 outColor;
-
-float hash2d(vec2 gridPoint) {
-    vec2 folded = fract(gridPoint * vec2(123.34, 456.21));
-    folded += dot(folded, folded + 45.32);
-    return fract(folded.x * folded.y);
-}
-
-float valueNoise(vec2 position) {
-    vec2 cellIndex = floor(position);
-    vec2 cellFraction = fract(position);
-    vec2 smoothStepUv =
-        cellFraction * cellFraction * (3.0 - 2.0 * cellFraction);
-    float corner00 = hash2d(cellIndex);
-    float corner10 = hash2d(cellIndex + vec2(1.0, 0.0));
-    float corner01 = hash2d(cellIndex + vec2(0.0, 1.0));
-    float corner11 = hash2d(cellIndex + vec2(1.0, 1.0));
-    return mix(
-        mix(corner00, corner10, smoothStepUv.x),
-        mix(corner01, corner11, smoothStepUv.x),
-        smoothStepUv.y
-    );
-}
-
+${GLSL_CAMERA_RAY_LIB}${GLSL_NOISE_LIB}
 float signedDistanceRoundedRectangle(
     vec2 point2d,
     vec2 halfExtents,
@@ -186,11 +199,9 @@ vec3 shadeKeypadSurface(
         float chebyshevRadius = max(abs(hitPoint.x), abs(hitPoint.y));
         float innerLightPipe = smoothstep(58.5, 51.2, chebyshevRadius);
         float topDiffusion = smoothstep(0.15, 0.95, localNormal.z);
-        vec3 frostedAcrylic = mix(
-            vec3(0.92, 0.97, 1.00),
-            bezelHue,
-            0.48 + 0.44 * innerLightPipe
-        );
+        vec3 acrylicWhite = vec3(0.92, 0.97, 1.00);
+        vec3 frostedAcrylic =
+            mix(acrylicWhite, bezelHue, 0.48 + 0.44 * innerLightPipe);
         vec3 bezelSurface = mix(bezelHue, frostedAcrylic, topDiffusion * 0.72);
         return bezelSurface * (1.04 + hoverIntensity * 0.12);
     }
@@ -207,18 +218,22 @@ vec3 shadeKeypadSurface(
     float screwRadius = length(abs(hitPoint.xy) - vec2(45.0));
     if (isPlateHit && screwRadius < 1.25 && hitPoint.z > 1.8) {
         float hexSocket = 1.0 - smoothstep(0.45, 0.58, screwRadius);
-        return mix(vec3(0.76, 0.78, 0.82), vec3(0.14), hexSocket)
+        vec3 screwHeadMetal = vec3(0.76, 0.78, 0.82);
+        vec3 screwSocketDark = vec3(0.14);
+        return mix(screwHeadMetal, screwSocketDark, hexSocket)
             * ambientOcclusion;
     }
 
     if (isPlateHit) {
         float brushedGrain =
-            valueNoise(vec2(hitPoint.x * 0.5, hitPoint.y * 6.5));
-        vec3 plateAlbedo =
-            vec3(0.45, 0.46, 0.50) * (0.96 + 0.06 * brushedGrain);
+            valueNoiseSimd(vec2(hitPoint.x * 0.5, hitPoint.y * 6.5));
+        vec3 plateBaseColor = vec3(0.45, 0.46, 0.50);
+        vec3 plateMintBounce = vec3(0.08, 0.28, 0.20);
+        vec3 plateVioletBounce = vec3(0.22, 0.11, 0.30);
+        vec3 plateAlbedo = plateBaseColor * (0.96 + 0.06 * brushedGrain);
         float directLight = 0.30 + 0.62 * topDiffuse;
-        vec3 bounceLight = vec3(0.08, 0.28, 0.20) * mintDiffuse
-            + vec3(0.22, 0.11, 0.30) * violetDiffuse;
+        vec3 bounceLight = plateMintBounce * mintDiffuse
+            + plateVioletBounce * violetDiffuse;
         return (plateAlbedo * directLight + bounceLight) * ambientOcclusion;
     }
 
@@ -227,13 +242,16 @@ vec3 shadeKeypadSurface(
         float normalDotView = max(0.0, dot(worldNormal, viewDirection));
         float fresnelFactor = pow(1.0 - normalDotView, 3.0);
         vec3 keycapAlbedo = vec3(0.34, 0.35, 0.39);
+        vec3 keyMintBounce = vec3(0.09, 0.36, 0.24);
+        vec3 keyVioletBounce = vec3(0.26, 0.12, 0.36);
+        vec3 keyFresnelTint = vec3(0.08);
         float directLight = 0.28 + 0.62 * topDiffuse;
-        vec3 bounceLight = vec3(0.09, 0.36, 0.24) * mintDiffuse
-            + vec3(0.26, 0.12, 0.36) * violetDiffuse;
+        vec3 bounceLight = keyMintBounce * mintDiffuse
+            + keyVioletBounce * violetDiffuse;
         return (
             keycapAlbedo * directLight
             + bounceLight
-            + vec3(0.08) * fresnelFactor
+            + keyFresnelTint * fresnelFactor
         ) * ambientOcclusion;
     }
 
@@ -250,14 +268,20 @@ vec3 shadeKeypadSurface(
     float violetSpecular =
         pow(max(0.0, dot(reflectedRay, violetLightDirection)), 7.0);
 
-    vec3 satinTop = vec3(0.75, 0.77, 0.80) * (0.50 + 0.52 * topDiffuse)
-        + vec3(0.06, 0.15, 0.11) * mintDiffuse
-        + vec3(0.11, 0.06, 0.15) * violetDiffuse;
+    vec3 knobCapSilver = vec3(0.75, 0.77, 0.80);
+    vec3 knobMintBounce = vec3(0.06, 0.15, 0.11);
+    vec3 knobVioletBounce = vec3(0.11, 0.06, 0.15);
+    vec3 satinTop = knobCapSilver * (0.50 + 0.52 * topDiffuse)
+        + knobMintBounce * mintDiffuse
+        + knobVioletBounce * violetDiffuse;
     float chromeBase =
         0.30 + 0.30 * horizonReflection + 0.48 * softboxReflection;
-    vec3 flutedChrome = vec3(chromeBase)
-        + vec3(0.26, 0.74, 0.56) * mintSpecular
-        + vec3(0.62, 0.32, 0.82) * violetSpecular;
+    vec3 chromeNeutral = vec3(chromeBase);
+    vec3 knobMintSpecularColor = vec3(0.26, 0.74, 0.56);
+    vec3 knobVioletSpecularColor = vec3(0.62, 0.32, 0.82);
+    vec3 flutedChrome = chromeNeutral
+        + knobMintSpecularColor * mintSpecular
+        + knobVioletSpecularColor * violetSpecular;
     return mix(flutedChrome, satinTop, topCapMask) * ambientOcclusion;
 }
 
@@ -265,23 +289,11 @@ void main() {
     if (u_keypad[1].w <= 0.5) {
         discard;
     }
-    float pixelX = gl_FragCoord.x / u_device_pixel_ratio;
-    float pixelY = u_resolution.y - gl_FragCoord.y / u_device_pixel_ratio;
-    vec2 pixelPosition = vec2(pixelX, pixelY);
-    float halfHeight = max(u_resolution.y * 0.5, 1.0);
-
-    float horizontalTangent =
-        ((pixelPosition.x - u_resolution.x * 0.5) / halfHeight)
-        * u_camera[0].w;
-    float verticalTangent =
-        ((u_resolution.y * 0.5 - pixelPosition.y) / halfHeight)
-        * u_camera[0].w;
+    vec2 pixelPosition =
+        computeStagePixelPosition(u_resolution, u_device_pixel_ratio);
     vec3 cameraPosition = u_camera[0].xyz;
-    vec3 worldRayDirection = normalize(
-        u_camera[1].xyz
-        + horizontalTangent * u_camera[2].xyz
-        + verticalTangent * u_camera[3].xyz
-    );
+    vec3 worldRayDirection =
+        computeStageRayDirection(pixelPosition, u_resolution, u_camera);
 
     vec3 keypadCenter = u_keypad[0].xyz;
     float millimetersPerUnit = max(u_keypad[0].w, 1.0);
@@ -416,7 +428,12 @@ void main() {
         vec3 haloColor = evaluateBezelPalette(haloGradient);
         float haloFalloff = exp(-max(0.0, closestBezelDistance) * 0.28)
             * (0.36 + hoverIntensity * 0.14);
-        outColor = vec4(haloColor * haloFalloff * keypadVisibility, 0.0);
+        float haloStrength = haloFalloff * keypadVisibility;
+        float lightHaloAlpha = clamp(haloStrength * 0.85, 0.0, 1.0);
+        vec3 darkHaloRgb = haloColor * haloStrength;
+        vec3 lightHaloRgb = haloColor * 0.82 * lightHaloAlpha;
+        vec3 finalHaloRgb = mix(darkHaloRgb, lightHaloRgb, u_light_mode);
+        outColor = vec4(finalHaloRgb, lightHaloAlpha * u_light_mode);
         return;
     }
 
@@ -459,40 +476,44 @@ void main() {
     float edgeAlpha = keypadVisibility * bezelEdge;
     outColor = vec4(surfaceColor * edgeAlpha, edgeAlpha);
 }
-`;
+`
+);
 
 export function projectKeypadQuad(
-    viewportWidth,
-    viewportHeight,
-    cameraBuffer,
-    keypadBuffer
-) {
-    const offsetX = keypadBuffer[0] - cameraBuffer[0];
-    const offsetY = keypadBuffer[1] - cameraBuffer[1];
-    const offsetZ = keypadBuffer[2] - cameraBuffer[2];
-    const cameraSpaceX =
-        offsetX * cameraBuffer[8]
-        + offsetY * cameraBuffer[9]
-        + offsetZ * cameraBuffer[10];
-    const cameraSpaceY =
-        offsetX * cameraBuffer[12]
-        + offsetY * cameraBuffer[13]
-        + offsetZ * cameraBuffer[14];
-    const cameraSpaceZ = Math.max(
-        1.0,
-        offsetX * cameraBuffer[4]
-        + offsetY * cameraBuffer[5]
-        + offsetZ * cameraBuffer[6]
+    viewportWidth: CssPixels,
+    viewportHeight: CssPixels,
+    cameraBuffer: CameraUniformBuffer,
+    keypadBuffer: KeypadUniformBuffer
+): QuadBoundsTuple {
+    const worldX: WorldUnits = asWorldUnits(keypadBuffer[0]);
+    const worldY: WorldUnits = asWorldUnits(keypadBuffer[1]);
+    const worldZ: WorldUnits = asWorldUnits(keypadBuffer[2]);
+    const cameraCoords: CameraSpaceTuple = projectPointToCameraSpace(
+        worldX,
+        worldY,
+        worldZ,
+        cameraBuffer
     );
-    const focalLength =
-        (viewportHeight * 0.5) / Math.max(0.1, cameraBuffer[3]);
-    const projectionScale = focalLength / cameraSpaceZ;
-    const screenX = viewportWidth * 0.5 + cameraSpaceX * projectionScale;
-    const screenY = viewportHeight * 0.5 - cameraSpaceY * projectionScale;
-    const millimetersPerUnit = Math.max(1.0, keypadBuffer[3]);
-    const halfExtentPixels = Math.min(
-        Math.max(viewportWidth, viewportHeight),
-        (114.0 / millimetersPerUnit) * projectionScale * 1.24
+    const cameraSpaceX: WorldUnits = cameraCoords[0];
+    const cameraSpaceY: WorldUnits = cameraCoords[1];
+    const cameraSpaceZ: WorldUnits = cameraCoords[2];
+    const tangentHalfFov: number = Math.max(0.1, cameraBuffer[3]);
+    const focalLength: number = (viewportHeight * 0.5) / tangentHalfFov;
+    const projectionScale: number = focalLength / cameraSpaceZ;
+    const screenX: CssPixels = asCssPixels(
+        viewportWidth * 0.5 + cameraSpaceX * projectionScale
+    );
+    const screenY: CssPixels = asCssPixels(
+        viewportHeight * 0.5 - cameraSpaceY * projectionScale
+    );
+    const millimetersPerUnit: Millimeters = asMillimeters(
+        Math.max(1.0, keypadBuffer[3])
+    );
+    const maximumDimension: number = Math.max(viewportWidth, viewportHeight);
+    const projectedExtent: number =
+        (114.0 / millimetersPerUnit) * projectionScale * 1.24;
+    const halfExtentPixels: CssPixels = asCssPixels(
+        Math.min(maximumDimension, projectedExtent)
     );
     return [screenX, screenY, halfExtentPixels, halfExtentPixels];
 }

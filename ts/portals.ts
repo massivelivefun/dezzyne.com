@@ -1,17 +1,105 @@
+import {
+    GLSL_CAMERA_RAY_LIB,
+    GLSL_NOISE_LIB,
+    GLSL_PORTAL_RINGS_LIB,
+    METADATA_U32S_PER_PORTAL,
+    PARTICLE_FLOATS,
+    asDesignUnits,
+    asDevicePixels,
+    asGlslSource,
+    type Branded,
+    type CanvasDesignUnits,
+    type DevicePixels,
+    type ElementCount,
+    type GlslSource,
+    type PortalMetadataBuffer,
+} from "./shader-lib.ts";
+
 const { Math, String } = globalThis;
 
-export const PARTICLE_FLOATS = 8;
-export const METADATA_U32S_PER_PORTAL = 4;
+export { METADATA_U32S_PER_PORTAL, PARTICLE_FLOATS };
 
-const DESIGN_WIDTH = 920;
-const DESIGN_HEIGHT = 428;
-const LABEL_TEXTURE_WIDTH = 640;
-const LABEL_TEXTURE_HEIGHT = 298;
-const LABEL_RENDER_SCALE = LABEL_TEXTURE_WIDTH / DESIGN_WIDTH;
-const LABEL_ASPECT_RATIO = DESIGN_WIDTH / DESIGN_HEIGHT;
-const LABEL_FONT_FAMILY = '"Helvetica Neue", Helvetica, "Inter", sans-serif';
+type CssColorValue = Branded<string, "CssColorValue">;
+type CssFontSpec = Branded<string, "CssFontSpec">;
 
-export const PORTAL_FRAGMENT_SHADER_SOURCE = `#version 300 es
+function asCssColor(rawColor: string): CssColorValue {
+    return rawColor as CssColorValue;
+}
+
+function asCssFont(rawFont: string): CssFontSpec {
+    return rawFont as CssFontSpec;
+}
+
+export interface LabelSlot {
+    readonly texture: WebGLTexture;
+    previousSeconds: number;
+    previousIdentifier: number;
+    isReady: boolean;
+}
+
+export interface LabelManager {
+    readonly aspectRatio: number;
+    readonly slots: readonly LabelSlot[];
+    setLightMode(nextLightMode: boolean): void;
+    synchronize(
+        portalCount: ElementCount,
+        metadataView: PortalMetadataBuffer
+    ): void;
+    dispose(): void;
+}
+
+export interface PortalsShaderModule {
+    readonly METADATA_U32S_PER_PORTAL: ElementCount;
+    readonly PARTICLE_FLOATS: ElementCount;
+    readonly PORTAL_FRAGMENT_SHADER_SOURCE: GlslSource;
+    readonly PARTICLE_VERTEX_SHADER_SOURCE: GlslSource;
+    readonly PARTICLE_FRAGMENT_SHADER_SOURCE: GlslSource;
+    readonly LABEL_FRAGMENT_SHADER_SOURCE: GlslSource;
+    createLabelManager(
+        glContext: WebGL2RenderingContext,
+        initialLightMode?: boolean
+    ): LabelManager | null;
+}
+
+const DESIGN_WIDTH: CanvasDesignUnits = asDesignUnits(920);
+const DESIGN_HEIGHT: CanvasDesignUnits = asDesignUnits(428);
+const LABEL_TEXTURE_WIDTH: DevicePixels = asDevicePixels(640);
+const LABEL_TEXTURE_HEIGHT: DevicePixels = asDevicePixels(298);
+const LABEL_RENDER_SCALE: number = LABEL_TEXTURE_WIDTH / DESIGN_WIDTH;
+const LABEL_ASPECT_RATIO: number = DESIGN_WIDTH / DESIGN_HEIGHT;
+const LABEL_FONT_FAMILY: string =
+    '"Helvetica Neue", Helvetica, "Inter", sans-serif';
+
+const DARK_LABEL_TEXT_COLOR: CssColorValue = asCssColor("#f5f7fa");
+const LIGHT_LABEL_TEXT_COLOR: CssColorValue = asCssColor("#111318");
+const FLAG_CRIMSON_COLOR: CssColorValue = asCssColor("#d92b3a");
+const FLAG_WHITE_COLOR: CssColorValue = asCssColor("#f4f6f9");
+const FLAG_CANTON_COLOR: CssColorValue = asCssColor("#1c4ca8");
+const PURE_WHITE_COLOR: CssColorValue = asCssColor("#ffffff");
+const FLAG_RING_STROKE: CssColorValue = asCssColor(
+    "rgba(255, 255, 255, 0.85)"
+);
+const BADGE_DISC_FILL: CssColorValue = asCssColor("rgba(14, 18, 26, 0.54)");
+const WINDOWS_ACCENT_COLOR: CssColorValue = asCssColor("#00a8ff");
+const ANDROID_ACCENT_COLOR: CssColorValue = asCssColor("#2ed57a");
+const ANDROID_EYE_COLOR: CssColorValue = asCssColor("#121822");
+const APPLE_ACCENT_COLOR: CssColorValue = asCssColor("#e8eaf2");
+
+const TITLE_FONT_SPEC: CssFontSpec = asCssFont(
+    `500 42px ${LABEL_FONT_FAMILY}`
+);
+const SUBTITLE_FONT_SPEC: CssFontSpec = asCssFont(
+    `400 34px ${LABEL_FONT_FAMILY}`
+);
+const METADATA_FONT_SPEC: CssFontSpec = asCssFont(
+    `400 32px ${LABEL_FONT_FAMILY}`
+);
+const COUNTDOWN_FONT_SPEC: CssFontSpec = asCssFont(
+    `700 42px ${LABEL_FONT_FAMILY}`
+);
+
+export const PORTAL_FRAGMENT_SHADER_SOURCE: GlslSource = asGlslSource(
+    `#version 300 es
 precision highp float;
 
 uniform vec2 u_resolution;
@@ -21,38 +109,13 @@ uniform vec4 u_camera[5];
 uniform vec4 u_portal[3];
 uniform vec4 u_portal_rings[2];
 uniform float u_phase_offset;
+uniform float u_light_mode;
 
 out vec4 outColor;
-
-float valueNoiseSimd(vec2 position) {
-    vec2 cellIndex = floor(position);
-    vec2 cellFraction = fract(position);
-    vec2 smoothStepUv =
-        cellFraction * cellFraction * (3.0 - 2.0 * cellFraction);
-    vec4 cornerX = fract((cellIndex.x + vec4(0.0, 1.0, 0.0, 1.0)) * 123.34);
-    vec4 cornerY = fract((cellIndex.y + vec4(0.0, 0.0, 1.0, 1.0)) * 456.21);
-    vec4 dotOffset = cornerX * (cornerX + 45.32) + cornerY * (cornerY + 45.32);
-    vec4 cornerHashes = fract((cornerX + dotOffset) * (cornerY + dotOffset));
-    vec2 horizontalMix = mix(
-        cornerHashes.xz,
-        cornerHashes.yw,
-        smoothStepUv.x
-    );
-    return mix(horizontalMix.x, horizontalMix.y, smoothStepUv.y);
-}
-
-float evaluatePortalRings(float radialDistance, vec4 radii, vec4 alphas) {
-    vec4 radialDelta = radialDistance - radii;
-    vec4 squaredDelta = radialDelta * radialDelta;
-    vec4 ringProfile =
-        exp(-squaredDelta * 34.0) + exp(-squaredDelta * 5.5) * 0.45;
-    return dot(ringProfile, alphas);
-}
-
+${GLSL_CAMERA_RAY_LIB}${GLSL_NOISE_LIB}${GLSL_PORTAL_RINGS_LIB}
 void main() {
-    float pixelX = gl_FragCoord.x / u_device_pixel_ratio;
-    float pixelY = u_resolution.y - gl_FragCoord.y / u_device_pixel_ratio;
-    vec2 pixelPosition = vec2(pixelX, pixelY);
+    vec2 pixelPosition =
+        computeStagePixelPosition(u_resolution, u_device_pixel_ratio);
 
     vec2 portalRadii = max(u_portal[0].zw, vec2(1.0));
     vec2 normalizedOffset = (pixelPosition - u_portal[0].xy) / portalRadii;
@@ -65,11 +128,15 @@ void main() {
     float auraDistance = max(normalizedRadius - 0.98, 0.0);
     float auraFade = smoothstep(1.36, 1.0, normalizedRadius);
     float auraIntensity = exp(-auraDistance * 8.5) * auraFade;
-    vec3 auraColor =
-        vec3(0.16, 0.54, 1.00) * auraIntensity * 0.52 * popAlpha;
+    float auraStrength = auraIntensity * 0.52 * popAlpha;
+    vec3 darkAuraBlue = vec3(0.16, 0.54, 1.00);
+    vec3 lightAuraCobalt = vec3(0.08, 0.42, 0.92);
+    vec3 auraTint = mix(darkAuraBlue, lightAuraCobalt, u_light_mode);
+    vec3 auraColor = auraTint * auraStrength;
+    float auraAlpha = clamp(auraStrength, 0.0, 1.0) * u_light_mode;
 
     if (normalizedRadius > 1.04) {
-        outColor = vec4(auraColor, 0.0);
+        outColor = vec4(auraColor, auraAlpha);
         return;
     }
 
@@ -132,29 +199,19 @@ void main() {
     vortexColor *= 0.56 + 0.44 * smoothstep(0.0, 0.36, normalizedRadius);
 
     float innerRimFactor = smoothstep(0.68, 0.99, normalizedRadius);
-    vortexColor = mix(
-        vortexColor,
-        vec3(0.24, 0.66, 1.00),
-        innerRimFactor * 0.62
-    );
+    vec3 innerRimBlue = vec3(0.24, 0.66, 1.00);
+    vortexColor = mix(vortexColor, innerRimBlue, innerRimFactor * 0.62);
 
     float shimmerPhase =
         polarAngle * 3.0 - animationTime * 2.8 + primaryNoise * 3.0;
     float rimShimmer = 0.88 + 0.12 * sin(shimmerPhase);
     float rimMask = 1.0 - smoothstep(-1.2, 1.2, edgeDistancePixels);
     float rimLine = exp(-abs(edgeDistancePixels + 1.5) * 0.62) * rimMask;
-    vec3 rimColor = vec3(0.54, 0.86, 1.00) * rimShimmer;
+    vec3 rimHighlightBlue = vec3(0.54, 0.86, 1.00);
+    vec3 rimColor = rimHighlightBlue * rimShimmer;
 
-    float halfHeight = max(u_resolution.y * 0.5, 1.0);
-    float tangentFov = u_camera[0].w;
-    float horizontalTangent =
-        ((pixelPosition.x - u_resolution.x * 0.5) / halfHeight) * tangentFov;
-    float verticalTangent =
-        ((u_resolution.y * 0.5 - pixelPosition.y) / halfHeight) * tangentFov;
-    vec3 unnormalizedRay = u_camera[1].xyz
-        + horizontalTangent * u_camera[2].xyz
-        + verticalTangent * u_camera[3].xyz;
-    vec3 rayDirection = normalize(unnormalizedRay);
+    vec3 rayDirection =
+        computeStageRayDirection(pixelPosition, u_resolution, u_camera);
     float ringIntersectionDistance =
         (u_portal[1].w - u_camera[0].y) / min(rayDirection.y, -0.006);
     vec2 ringPlaneXz =
@@ -170,10 +227,8 @@ void main() {
     float ringSum =
         evaluatePortalRings(ringRadialDistance, ringRadii, ringAlphas);
     float ringVisibility = smoothstep(-0.008, -0.028, rayDirection.y);
-    vec3 ringGlow = vec3(0.18, 0.60, 1.00)
-        * min(ringSum, 2.2)
-        * ringVisibility
-        * 0.92;
+    vec3 ringWaveBlue = vec3(0.18, 0.60, 1.00);
+    vec3 ringGlow = ringWaveBlue * min(ringSum, 2.2) * ringVisibility * 0.92;
     float foregroundRingMask = smoothstep(
         u_portal[1].y + 0.04,
         u_portal[1].y - 0.04,
@@ -184,12 +239,15 @@ void main() {
         + vortexColor * portalMask
         + rimColor * rimLine * 0.76 * popAlpha
         + ringGlow * foregroundRingMask * portalMask;
+    float compositeAlpha = portalMask + auraAlpha * (1.0 - portalMask);
 
-    outColor = vec4(premultipliedColor, portalMask);
+    outColor = vec4(premultipliedColor, compositeAlpha);
 }
-`;
+`
+);
 
-export const PARTICLE_VERTEX_SHADER_SOURCE = `#version 300 es
+export const PARTICLE_VERTEX_SHADER_SOURCE: GlslSource = asGlslSource(
+    `#version 300 es
 in vec2 a_quad;
 in vec4 a_particle_geometry;
 in vec4 a_particle_appearance;
@@ -219,10 +277,14 @@ void main() {
     v_alpha = a_particle_appearance.z;
     v_tint_code = a_particle_appearance.w;
 }
-`;
+`
+);
 
-export const PARTICLE_FRAGMENT_SHADER_SOURCE = `#version 300 es
+export const PARTICLE_FRAGMENT_SHADER_SOURCE: GlslSource = asGlslSource(
+    `#version 300 es
 precision highp float;
+
+uniform float u_light_mode;
 
 in vec2 v_quad_uv;
 in float v_alpha;
@@ -243,9 +305,20 @@ void main() {
         float colorBlend = clamp(v_tint_code * 2.2, 0.0, 1.0);
         vec3 deepBlue = vec3(0.20, 0.64, 1.00);
         vec3 skyBlue = vec3(0.38, 0.80, 1.00);
+        vec3 moteCoreWhite = vec3(0.86, 0.96, 1.00);
         vec3 baseColor = mix(deepBlue, skyBlue, colorBlend);
-        vec3 moteColor = baseColor + vec3(0.86, 0.96, 1.00) * moteCore * 0.50;
-        outColor = vec4(moteColor * moteGlow * v_alpha, 1.0);
+        vec3 moteColor = baseColor + moteCoreWhite * moteCore * 0.50;
+        vec3 darkMote = moteColor * moteGlow * v_alpha;
+
+        vec3 lightSapphire = vec3(0.04, 0.36, 0.92);
+        vec3 lightCerulean = vec3(0.08, 0.54, 0.98);
+        vec3 lightCoreHighlight = vec3(0.30, 0.44, 0.55);
+        vec3 lightBase = mix(lightSapphire, lightCerulean, colorBlend);
+        vec3 lightCore = lightCoreHighlight * moteCore * 0.4;
+        vec3 lightTint = clamp(lightBase + lightCore, 0.0, 1.0);
+        float moteOpacity = clamp(moteGlow * v_alpha * 1.15, 0.0, 1.0);
+        vec3 finalMote = mix(darkMote, lightTint * moteOpacity, u_light_mode);
+        outColor = vec4(finalMote, moteOpacity * u_light_mode);
         return;
     }
 
@@ -267,25 +340,41 @@ void main() {
     }
 
     float shadeFactor = clamp(v_tint_code - 1.0, 0.0, 1.0);
-    vec3 tailPurple = mix(
-        vec3(0.54, 0.20, 0.96),
-        vec3(0.72, 0.26, 0.94),
-        shadeFactor
-    );
-    vec3 headPink = mix(
-        vec3(0.94, 0.38, 0.86),
-        vec3(1.00, 0.54, 0.90),
-        shadeFactor
-    );
+    vec3 deepTailViolet = vec3(0.54, 0.20, 0.96);
+    vec3 brightTailOrchid = vec3(0.72, 0.26, 0.94);
+    vec3 warmHeadRose = vec3(0.94, 0.38, 0.86);
+    vec3 brightHeadPink = vec3(1.00, 0.54, 0.90);
+    vec3 streakHeadWhite = vec3(1.00, 0.90, 0.98);
+    vec3 tailPurple = mix(deepTailViolet, brightTailOrchid, shadeFactor);
+    vec3 headPink = mix(warmHeadRose, brightHeadPink, shadeFactor);
     float gradientFactor = clamp((v_quad_uv.x + 0.55) / 1.20, 0.0, 1.0);
     vec3 streakColor = mix(tailPurple, headPink, gradientFactor);
-    streakColor += vec3(1.00, 0.90, 0.98) * streakHead * 0.72;
+    streakColor += streakHeadWhite * streakHead * 0.72;
+    vec3 darkStreak = streakColor * streakGlow * v_alpha;
 
-    outColor = vec4(streakColor * streakGlow * v_alpha, 1.0);
+    vec3 lightTailIndigo = vec3(0.42, 0.10, 0.86);
+    vec3 lightHeadMagenta = vec3(0.84, 0.16, 0.66);
+    vec3 lightHeadBloom = vec3(0.32, 0.20, 0.34);
+    vec3 lightStreakBase = mix(
+        lightTailIndigo,
+        lightHeadMagenta,
+        gradientFactor
+    );
+    vec3 lightStreakTint = clamp(
+        lightStreakBase + lightHeadBloom * streakHead * 0.45,
+        0.0,
+        1.0
+    );
+    float streakOpacity = clamp(streakGlow * v_alpha * 1.15, 0.0, 1.0);
+    vec3 finalStreak =
+        mix(darkStreak, lightStreakTint * streakOpacity, u_light_mode);
+    outColor = vec4(finalStreak, streakOpacity * u_light_mode);
 }
-`;
+`
+);
 
-export const LABEL_FRAGMENT_SHADER_SOURCE = `#version 300 es
+export const LABEL_FRAGMENT_SHADER_SOURCE: GlslSource = asGlslSource(
+    `#version 300 es
 precision highp float;
 
 in vec2 v_quad_uv;
@@ -299,22 +388,33 @@ void main() {
     vec4 texel = texture(u_texture, v_quad_uv);
     outColor = texel * u_alpha;
 }
-`;
+`
+);
 
-function drawUnitedStatesBadge(canvasContext, centerX, centerY, badgeRadius) {
+function drawUnitedStatesBadge(
+    canvasContext: CanvasRenderingContext2D,
+    centerX: CanvasDesignUnits,
+    centerY: CanvasDesignUnits,
+    badgeRadius: CanvasDesignUnits
+): void {
     canvasContext.save();
     canvasContext.beginPath();
     canvasContext.arc(centerX, centerY, badgeRadius, 0, Math.PI * 2);
     canvasContext.clip();
 
-    const stripeCount = 7;
-    const stripeHeight = (badgeRadius * 2) / stripeCount;
-    const topEdgeY = centerY - badgeRadius;
-    const leftEdgeX = centerX - badgeRadius;
+    const stripeCount: number = 7;
+    const stripeHeight: number = (badgeRadius * 2) / stripeCount;
+    const topEdgeY: number = centerY - badgeRadius;
+    const leftEdgeX: number = centerX - badgeRadius;
 
-    for (let stripeIndex = 0; stripeIndex < stripeCount; stripeIndex++) {
-        canvasContext.fillStyle =
-            stripeIndex % 2 === 0 ? "#d92b3a" : "#f4f6f9";
+    for (
+        let stripeIndex: number = 0;
+        stripeIndex < stripeCount;
+        stripeIndex++
+    ) {
+        const stripeColor: CssColorValue =
+            stripeIndex % 2 === 0 ? FLAG_CRIMSON_COLOR : FLAG_WHITE_COLOR;
+        canvasContext.fillStyle = stripeColor;
         canvasContext.fillRect(
             leftEdgeX,
             topEdgeY + stripeIndex * stripeHeight,
@@ -323,7 +423,7 @@ function drawUnitedStatesBadge(canvasContext, centerX, centerY, badgeRadius) {
         );
     }
 
-    canvasContext.fillStyle = "#1c4ca8";
+    canvasContext.fillStyle = FLAG_CANTON_COLOR;
     canvasContext.fillRect(
         leftEdgeX,
         topEdgeY,
@@ -331,12 +431,12 @@ function drawUnitedStatesBadge(canvasContext, centerX, centerY, badgeRadius) {
         badgeRadius * 1.05
     );
 
-    canvasContext.fillStyle = "#ffffff";
-    for (let starRow = 0; starRow < 2; starRow++) {
-        for (let starColumn = 0; starColumn < 3; starColumn++) {
-            const columnStep = starColumn * (badgeRadius * 0.28);
-            const starX = leftEdgeX + badgeRadius * 0.3 + columnStep;
-            const starY =
+    canvasContext.fillStyle = PURE_WHITE_COLOR;
+    for (let starRow: number = 0; starRow < 2; starRow++) {
+        for (let starColumn: number = 0; starColumn < 3; starColumn++) {
+            const columnStep: number = starColumn * (badgeRadius * 0.28);
+            const starX: number = leftEdgeX + badgeRadius * 0.3 + columnStep;
+            const starY: number =
                 topEdgeY + badgeRadius * 0.35 + starRow * (badgeRadius * 0.34);
             canvasContext.beginPath();
             canvasContext.arc(starX, starY, 1.3, 0, Math.PI * 2);
@@ -346,7 +446,7 @@ function drawUnitedStatesBadge(canvasContext, centerX, centerY, badgeRadius) {
     canvasContext.restore();
 
     canvasContext.save();
-    canvasContext.strokeStyle = "rgba(255, 255, 255, 0.85)";
+    canvasContext.strokeStyle = FLAG_RING_STROKE;
     canvasContext.lineWidth = 1.5;
     canvasContext.beginPath();
     canvasContext.arc(centerX, centerY, badgeRadius, 0, Math.PI * 2);
@@ -355,14 +455,14 @@ function drawUnitedStatesBadge(canvasContext, centerX, centerY, badgeRadius) {
 }
 
 function drawBadgeRing(
-    canvasContext,
-    centerX,
-    centerY,
-    badgeRadius,
-    strokeColor
-) {
+    canvasContext: CanvasRenderingContext2D,
+    centerX: CanvasDesignUnits,
+    centerY: CanvasDesignUnits,
+    badgeRadius: CanvasDesignUnits,
+    strokeColor: CssColorValue
+): void {
     canvasContext.save();
-    canvasContext.fillStyle = "rgba(14, 18, 26, 0.54)";
+    canvasContext.fillStyle = BADGE_DISC_FILL;
     canvasContext.beginPath();
     canvasContext.arc(centerX, centerY, badgeRadius, 0, Math.PI * 2);
     canvasContext.fill();
@@ -376,16 +476,16 @@ function drawBadgeRing(
 }
 
 function drawQuadrilateralPane(
-    canvasContext,
-    x0,
-    y0,
-    x1,
-    y1,
-    x2,
-    y2,
-    x3,
-    y3
-) {
+    canvasContext: CanvasRenderingContext2D,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    x3: number,
+    y3: number
+): void {
     canvasContext.beginPath();
     canvasContext.moveTo(x0, y0);
     canvasContext.lineTo(x1, y1);
@@ -395,12 +495,22 @@ function drawQuadrilateralPane(
     canvasContext.fill();
 }
 
-function drawWindowsBadge(canvasContext, centerX, centerY, badgeRadius) {
-    const accentColor = "#00a8ff";
-    drawBadgeRing(canvasContext, centerX, centerY, badgeRadius, accentColor);
+function drawWindowsBadge(
+    canvasContext: CanvasRenderingContext2D,
+    centerX: CanvasDesignUnits,
+    centerY: CanvasDesignUnits,
+    badgeRadius: CanvasDesignUnits
+): void {
+    drawBadgeRing(
+        canvasContext,
+        centerX,
+        centerY,
+        badgeRadius,
+        WINDOWS_ACCENT_COLOR
+    );
 
     canvasContext.save();
-    canvasContext.fillStyle = accentColor;
+    canvasContext.fillStyle = WINDOWS_ACCENT_COLOR;
 
     drawQuadrilateralPane(
         canvasContext,
@@ -449,13 +559,23 @@ function drawWindowsBadge(canvasContext, centerX, centerY, badgeRadius) {
     canvasContext.restore();
 }
 
-function drawAndroidBadge(canvasContext, centerX, centerY, badgeRadius) {
-    const accentColor = "#2ed57a";
-    drawBadgeRing(canvasContext, centerX, centerY, badgeRadius, accentColor);
+function drawAndroidBadge(
+    canvasContext: CanvasRenderingContext2D,
+    centerX: CanvasDesignUnits,
+    centerY: CanvasDesignUnits,
+    badgeRadius: CanvasDesignUnits
+): void {
+    drawBadgeRing(
+        canvasContext,
+        centerX,
+        centerY,
+        badgeRadius,
+        ANDROID_ACCENT_COLOR
+    );
 
     canvasContext.save();
-    canvasContext.fillStyle = accentColor;
-    canvasContext.strokeStyle = accentColor;
+    canvasContext.fillStyle = ANDROID_ACCENT_COLOR;
+    canvasContext.strokeStyle = ANDROID_ACCENT_COLOR;
     canvasContext.lineWidth = 3.2;
     canvasContext.lineCap = "round";
 
@@ -471,7 +591,7 @@ function drawAndroidBadge(canvasContext, centerX, centerY, badgeRadius) {
     canvasContext.lineTo(centerX + 14.5, centerY - 13.5);
     canvasContext.stroke();
 
-    canvasContext.fillStyle = "#121822";
+    canvasContext.fillStyle = ANDROID_EYE_COLOR;
     canvasContext.beginPath();
     canvasContext.arc(centerX - 8.2, centerY + 2.0, 2.3, 0, Math.PI * 2);
     canvasContext.arc(centerX + 8.2, centerY + 2.0, 2.3, 0, Math.PI * 2);
@@ -479,12 +599,22 @@ function drawAndroidBadge(canvasContext, centerX, centerY, badgeRadius) {
     canvasContext.restore();
 }
 
-function drawAppleBadge(canvasContext, centerX, centerY, badgeRadius) {
-    const accentColor = "#e8eaf2";
-    drawBadgeRing(canvasContext, centerX, centerY, badgeRadius, accentColor);
+function drawAppleBadge(
+    canvasContext: CanvasRenderingContext2D,
+    centerX: CanvasDesignUnits,
+    centerY: CanvasDesignUnits,
+    badgeRadius: CanvasDesignUnits
+): void {
+    drawBadgeRing(
+        canvasContext,
+        centerX,
+        centerY,
+        badgeRadius,
+        APPLE_ACCENT_COLOR
+    );
 
     canvasContext.save();
-    canvasContext.fillStyle = accentColor;
+    canvasContext.fillStyle = APPLE_ACCENT_COLOR;
     canvasContext.translate(centerX - 11.6 * 1.46, centerY - 12.2 * 1.46);
     canvasContext.scale(1.46, 1.46);
 
@@ -511,31 +641,43 @@ function drawAppleBadge(canvasContext, centerX, centerY, badgeRadius) {
     canvasContext.restore();
 }
 
-function buildStaticChromeCanvas() {
-    const templateCanvas = document.createElement("canvas");
+function buildStaticChromeCanvas(
+    isLightMode: boolean
+): HTMLCanvasElement | null {
+    const templateCanvas: HTMLCanvasElement = document.createElement("canvas");
     templateCanvas.width = LABEL_TEXTURE_WIDTH;
     templateCanvas.height = LABEL_TEXTURE_HEIGHT;
-    const canvasContext = templateCanvas.getContext("2d");
+    const canvasContext: CanvasRenderingContext2D | null =
+        templateCanvas.getContext("2d");
     if (!canvasContext) {
         return null;
     }
 
     canvasContext.scale(LABEL_RENDER_SCALE, LABEL_RENDER_SCALE);
-    const centerX = DESIGN_WIDTH * 0.5;
+    const centerX: CanvasDesignUnits = asDesignUnits(DESIGN_WIDTH * 0.5);
+    const labelColor: CssColorValue = isLightMode
+        ? LIGHT_LABEL_TEXT_COLOR
+        : DARK_LABEL_TEXT_COLOR;
     canvasContext.textAlign = "center";
     canvasContext.textBaseline = "alphabetic";
-    canvasContext.fillStyle = "#f5f7fa";
+    canvasContext.fillStyle = labelColor;
 
-    canvasContext.font = `500 42px ${LABEL_FONT_FAMILY}`;
+    canvasContext.font = TITLE_FONT_SPEC;
     canvasContext.fillText("Coming Soon", centerX, 58);
 
-    canvasContext.font = `400 34px ${LABEL_FONT_FAMILY}`;
+    canvasContext.font = SUBTITLE_FONT_SPEC;
     canvasContext.fillText("Dezzyne", centerX, 114);
 
-    const platformCenterY = 371;
-    const platformRadius = 35;
-    const platformSpacing = 80;
-    const firstPlatformX = centerX + 217;
+    const platformCenterY: CanvasDesignUnits = asDesignUnits(371);
+    const platformRadius: CanvasDesignUnits = asDesignUnits(35);
+    const platformSpacing: number = 80;
+    const firstPlatformX: CanvasDesignUnits = asDesignUnits(centerX + 217);
+    const secondPlatformX: CanvasDesignUnits = asDesignUnits(
+        firstPlatformX + platformSpacing
+    );
+    const thirdPlatformX: CanvasDesignUnits = asDesignUnits(
+        firstPlatformX + platformSpacing * 2
+    );
 
     drawWindowsBadge(
         canvasContext,
@@ -545,13 +687,13 @@ function buildStaticChromeCanvas() {
     );
     drawAndroidBadge(
         canvasContext,
-        firstPlatformX + platformSpacing,
+        secondPlatformX,
         platformCenterY,
         platformRadius
     );
     drawAppleBadge(
         canvasContext,
-        firstPlatformX + platformSpacing * 2,
+        thirdPlatformX,
         platformCenterY,
         platformRadius
     );
@@ -559,12 +701,13 @@ function buildStaticChromeCanvas() {
 }
 
 function paintDynamicLabel(
-    canvasContext,
-    staticChromeCanvas,
-    instanceIdentifier,
-    playerCount,
-    countdownSeconds
-) {
+    canvasContext: CanvasRenderingContext2D,
+    staticChromeCanvas: HTMLCanvasElement,
+    instanceIdentifier: number,
+    playerCount: number,
+    countdownSeconds: number,
+    isLightMode: boolean
+): void {
     canvasContext.setTransform(1, 0, 0, 1, 0, 0);
     canvasContext.clearRect(0, 0, LABEL_TEXTURE_WIDTH, LABEL_TEXTURE_HEIGHT);
     canvasContext.drawImage(staticChromeCanvas, 0, 0);
@@ -577,62 +720,85 @@ function paintDynamicLabel(
         0,
         0
     );
-    const centerX = DESIGN_WIDTH * 0.5;
-    const regionText = `(W) #${String(instanceIdentifier)}  Public`;
-    canvasContext.font = `400 32px ${LABEL_FONT_FAMILY}`;
-    const regionTextWidth = canvasContext.measureText(regionText).width;
-    const badgeRadius = 14;
-    const badgeGap = 11;
-    const rowWidth = badgeRadius * 2 + badgeGap + regionTextWidth;
-    const rowStartX = centerX - rowWidth * 0.5;
+    const centerX: CanvasDesignUnits = asDesignUnits(DESIGN_WIDTH * 0.5);
+    const regionText: string = `(W) #${String(instanceIdentifier)}  Public`;
+    canvasContext.font = METADATA_FONT_SPEC;
+    const measuredMetrics: TextMetrics = canvasContext.measureText(regionText);
+    const regionTextWidth: number = measuredMetrics.width;
+    const badgeRadius: CanvasDesignUnits = asDesignUnits(14);
+    const badgeGap: number = 11;
+    const rowWidth: number = badgeRadius * 2 + badgeGap + regionTextWidth;
+    const rowStartX: number = centerX - rowWidth * 0.5;
+    const badgeCenterX: CanvasDesignUnits = asDesignUnits(
+        rowStartX + badgeRadius
+    );
+    const badgeCenterY: CanvasDesignUnits = asDesignUnits(170 - 11);
 
     drawUnitedStatesBadge(
         canvasContext,
-        rowStartX + badgeRadius,
-        170 - 11,
+        badgeCenterX,
+        badgeCenterY,
         badgeRadius
     );
 
+    const textColor: CssColorValue = isLightMode
+        ? LIGHT_LABEL_TEXT_COLOR
+        : DARK_LABEL_TEXT_COLOR;
     canvasContext.textAlign = "left";
     canvasContext.textBaseline = "alphabetic";
-    canvasContext.fillStyle = "#f5f7fa";
+    canvasContext.fillStyle = textColor;
     canvasContext.fillText(
         regionText,
         rowStartX + badgeRadius * 2 + badgeGap,
         170
     );
 
+    const occupancyText: string = `${String(playerCount)} / 80`;
     canvasContext.textAlign = "center";
-    canvasContext.font = `400 32px ${LABEL_FONT_FAMILY}`;
-    canvasContext.fillText(`${String(playerCount)} / 80`, centerX, 226);
+    canvasContext.font = METADATA_FONT_SPEC;
+    canvasContext.fillText(occupancyText, centerX, 226);
 
-    canvasContext.font = `700 42px ${LABEL_FONT_FAMILY}`;
-    canvasContext.fillText(String(countdownSeconds), centerX, 288);
+    const countdownText: string = String(countdownSeconds);
+    canvasContext.font = COUNTDOWN_FONT_SPEC;
+    canvasContext.fillText(countdownText, centerX, 288);
 }
 
-export function createLabelManager(glContext) {
-    let staticChromeCanvas = buildStaticChromeCanvas();
-    const workCanvas = document.createElement("canvas");
+export function createLabelManager(
+    glContext: WebGL2RenderingContext,
+    initialLightMode?: boolean
+): LabelManager | null {
+    let isLightMode: boolean = Boolean(initialLightMode);
+    const initialChromeCanvas: HTMLCanvasElement | null =
+        buildStaticChromeCanvas(isLightMode);
+    const workCanvas: HTMLCanvasElement = document.createElement("canvas");
     workCanvas.width = LABEL_TEXTURE_WIDTH;
     workCanvas.height = LABEL_TEXTURE_HEIGHT;
-    const workContext = workCanvas.getContext("2d");
-    if (!staticChromeCanvas || !workContext) {
+    const workContext: CanvasRenderingContext2D | null =
+        workCanvas.getContext("2d");
+    if (!initialChromeCanvas || !workContext) {
         return null;
     }
 
-    const labelSlots = [];
-    let isDisposed = false;
+    let staticChromeCanvas: HTMLCanvasElement = initialChromeCanvas;
+    const renderingContext: CanvasRenderingContext2D = workContext;
+    const labelSlots: LabelSlot[] = [];
+    let isDisposed: boolean = false;
 
-    function refreshFontLabels() {
+    function refreshFontLabels(): void {
         if (isDisposed) {
             return;
         }
-        const refreshedChromeCanvas = buildStaticChromeCanvas();
+        const refreshedChromeCanvas: HTMLCanvasElement | null =
+            buildStaticChromeCanvas(isLightMode);
         if (!refreshedChromeCanvas) {
             return;
         }
         staticChromeCanvas = refreshedChromeCanvas;
-        for (let slotIndex = 0; slotIndex < labelSlots.length; slotIndex++) {
+        for (
+            let slotIndex: number = 0;
+            slotIndex < labelSlots.length;
+            slotIndex++
+        ) {
             labelSlots[slotIndex].isReady = false;
         }
     }
@@ -641,8 +807,8 @@ export function createLabelManager(glContext) {
         document.fonts.ready.then(refreshFontLabels);
     }
 
-    function allocateTexture() {
-        const texture = glContext.createTexture();
+    function allocateTexture(): WebGLTexture | null {
+        const texture: WebGLTexture | null = glContext.createTexture();
         if (!texture) {
             return null;
         }
@@ -673,33 +839,46 @@ export function createLabelManager(glContext) {
     return {
         aspectRatio: LABEL_ASPECT_RATIO,
         slots: labelSlots,
-        synchronize(portalCount, metadataView) {
+        setLightMode(nextLightMode: boolean): void {
+            const normalizedLight: boolean = Boolean(nextLightMode);
+            if (isDisposed || normalizedLight === isLightMode) {
+                return;
+            }
+            isLightMode = normalizedLight;
+            refreshFontLabels();
+        },
+        synchronize(
+            portalCount: ElementCount,
+            metadataView: PortalMetadataBuffer
+        ): void {
             if (!metadataView || portalCount <= 0) {
                 return;
             }
             while (labelSlots.length < portalCount) {
-                const texture = allocateTexture();
+                const texture: WebGLTexture | null = allocateTexture();
                 if (!texture) {
                     return;
                 }
-                labelSlots.push({
+                const freshSlot: LabelSlot = {
                     texture,
                     previousSeconds: -1,
                     previousIdentifier: 0,
                     isReady: false,
-                });
+                };
+                labelSlots.push(freshSlot);
             }
             for (
-                let portalIndex = 0;
+                let portalIndex: number = 0;
                 portalIndex < portalCount;
                 portalIndex++
             ) {
-                const slot = labelSlots[portalIndex];
-                const baseOffset = portalIndex * METADATA_U32S_PER_PORTAL;
-                const instanceIdentifier = metadataView[baseOffset];
-                const playerCount = metadataView[baseOffset + 1];
-                const countdownSeconds = metadataView[baseOffset + 2];
-                const unchanged =
+                const slot: LabelSlot = labelSlots[portalIndex];
+                const baseOffset: number =
+                    portalIndex * METADATA_U32S_PER_PORTAL;
+                const instanceIdentifier: number = metadataView[baseOffset];
+                const playerCount: number = metadataView[baseOffset + 1];
+                const countdownSeconds: number = metadataView[baseOffset + 2];
+                const unchanged: boolean =
                     countdownSeconds === slot.previousSeconds &&
                     instanceIdentifier === slot.previousIdentifier;
                 if (slot.isReady && unchanged) {
@@ -709,11 +888,12 @@ export function createLabelManager(glContext) {
                 slot.previousIdentifier = instanceIdentifier;
                 slot.isReady = true;
                 paintDynamicLabel(
-                    workContext,
+                    renderingContext,
                     staticChromeCanvas,
                     instanceIdentifier,
                     playerCount,
-                    countdownSeconds
+                    countdownSeconds,
+                    isLightMode
                 );
                 glContext.bindTexture(glContext.TEXTURE_2D, slot.texture);
                 glContext.pixelStorei(
@@ -730,10 +910,10 @@ export function createLabelManager(glContext) {
                 );
             }
         },
-        dispose() {
+        dispose(): void {
             isDisposed = true;
             for (
-                let slotIndex = 0;
+                let slotIndex: number = 0;
                 slotIndex < labelSlots.length;
                 slotIndex++
             ) {

@@ -2,7 +2,12 @@
 
 [build]
   publish = "public"
-  command = "zola build"
+  command = """\
+    yarn install --frozen-lockfile && \
+    yarn typecheck && \
+    yarn build && \
+    zola build\
+    """
 
 [[headers]]
   for = "/*"
@@ -26,7 +31,7 @@
     Content-Security-Policy = """\
       default-src 'none'; \
       script-src 'self' 'wasm-unsafe-eval'; \
-      style-src 'sha256-Fgw1rpd/B6vQLUfsyfRuJUR6T5i3ZRMiTYKO0bTvjzM='; \
+      style-src 'sha256-zKmWwPluoZxez4NP7hXwSegrXiKTjPUjxr0B1EvwmBU='; \
       img-src 'self'; \
       font-src 'self'; \
       connect-src 'self'; \
@@ -46,6 +51,12 @@
 
 [[headers]]
   for = "/wasm/*.js"
+  [headers.values]
+    Content-Type = "text/javascript; charset=utf-8"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/wasm/skyboxes/*.js"
   [headers.values]
     Content-Type = "text/javascript; charset=utf-8"
     X-Content-Type-Options = "nosniff"

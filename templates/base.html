@@ -5,11 +5,12 @@
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="color-scheme" content="dark">
+    <meta name="color-scheme" content="dark light">
     <meta name="darkreader-lock">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <style>{{ load_data(path="templates/style.css") | safe }}</style>
     <link rel="modulepreload" href="/wasm/stage.js">
+    <link rel="modulepreload" href="/wasm/shader-lib.js">
     <link
       rel="preload"
       href="/wasm/dezzyne_bg.wasm"
@@ -63,9 +64,19 @@
     </header>
 
     <div class="site-stage">
+      {%- if page is defined and page.extra.skybox is defined %}
+        {%- set page_skybox = page.extra.skybox %}
+      {%- elif section is defined and section.extra.skybox is defined %}
+        {%- set page_skybox = section.extra.skybox %}
+      {%- else %}
+        {%- set page_skybox = "" %}
+      {%- endif %}
       <canvas
         id="stage"
         class="stage"
+        {%- if page_skybox != "" %}
+        data-skybox="{{ page_skybox }}"
+        {%- endif %}
         {%- block stage_attributes %}{% endblock stage_attributes %}
         aria-hidden="true"></canvas>
       <div id="stage-surface" class="stage-surface" aria-hidden="true"></div>
