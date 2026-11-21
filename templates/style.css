@@ -596,33 +596,41 @@ a {
   }
 }
 
-@media (max-width: 768px) and (min-height: 620px) {
+@media (max-width: 768px) and (min-height: 540px) {
   body:has(.contact-form) {
     height: 100vh;
     height: 100svh;
+  }
+
+  .site-main:has(.contact-form) {
+    min-height: 0;
+    padding-bottom: 0.65rem;
   }
 
   .contact-body:has(.contact-form) {
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-height: 0;
     margin-bottom: 0;
   }
 
   .contact-form {
     flex: 1;
+    min-height: 0;
   }
 
   .form-field--message {
-    flex: 1;
-    min-height: 6.1rem;
-    max-height: 11rem;
+    flex: 1 1 auto;
+    min-height: 4.5rem;
+    max-height: none;
   }
 
   .form-field--message textarea {
     flex: 1 1 auto;
-    min-height: 4.8rem;
-    max-height: 9.8rem;
+    min-height: 3.4rem;
+    max-height: none;
+    resize: none;
   }
 }
 
