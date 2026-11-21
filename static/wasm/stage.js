@@ -30,7 +30,6 @@ const WASM_FETCH_OPTIONS = Object.freeze({
     method: "GET",
     credentials: "same-origin",
     mode: "cors",
-    redirect: "error",
 });
 
 const WEBGL_CONTEXT_OPTIONS = Object.freeze({
@@ -118,7 +117,12 @@ async function loadVerifiedWasm() {
     const response = await fetch(WASM_MODULE_URL, WASM_FETCH_OPTIONS);
     const validResponseType =
         response.type === "basic" || response.type === "cors";
-    if (!response.ok || response.status !== 200 || !validResponseType) {
+    if (
+        !response.ok ||
+        response.status !== 200 ||
+        response.redirected ||
+        !validResponseType
+    ) {
         return null;
     }
 
