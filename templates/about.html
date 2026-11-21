@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
+{% block content %}
+{%- if lang == config.default_language %}
+  {%- set language_prefix = "" %}
+{%- else %}
+  {%- set language_prefix = "/" ~ lang %}
+{%- endif %}
+<h1 class="page-title">{{ page.title }}</h1>
+<div class="about-body">
+  <h2 class="about-headline">{{ trans(key="about_headline", lang=lang) }}</h2>
+  <p class="about-copy">{{ trans(key="about_body", lang=lang) }}</p>
+  <nav class="about-pillars" aria-label="Studio focus">
+    <a
+      href="{{ language_prefix }}/games/"
+      class="accent-link accent-link--games">
+      {{- trans(key="about_games_link", lang=lang) -}}
+    </a>
+    <a
+      href="{{ language_prefix }}/ugce/"
+      class="accent-link accent-link--ugce">
+      {{- trans(key="about_ugce_link", lang=lang) -}}
+    </a>
+    <a
+      href="{{ language_prefix }}/tooling/"
+      class="accent-link accent-link--tools">
+      {{- trans(key="about_tools_link", lang=lang) -}}
+    </a>
+  </nav>
+</div>
+{% endblock content %}

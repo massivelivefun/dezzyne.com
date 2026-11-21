@@ -1,4 +1,4 @@
 +++
 title = "Über uns"
-template = "page.html"
+template = "about.html"
 +++

@@ -295,6 +295,18 @@ a {
   text-box-edge: cap alphabetic;
 }
 
+.accent-link--games {
+  color: #f05d5e;
+}
+
+.accent-link--ugce {
+  color: #4ede86;
+}
+
+.accent-link--tools {
+  color: #4da6ff;
+}
+
 .accent-link--storefront {
   color: #b57cff;
 }

@@ -42,6 +42,16 @@ thanks_body = """\
 back_home = "Back to Home"
 not_found_message = "There's nothing here, you should turn back..."
 footer_rights = "All rights reserved."
+about_headline = "We build games, worlds, and studio tools."
+about_body = """\
+  We are a fledgling software studio with a knack for delivering \
+  outstanding and inspiring standalone games, crafting social virtual \
+  worlds, and building tools that help other studios accelerate their \
+  production pipelines.\
+  """
+about_games_link = "Standalone Experiences"
+about_ugce_link = "UGC Experiences"
+about_tools_link = "Tooling"
 tooling_headline = "Empower your creativity."
 tooling_body = """\
   We publish production-ready editor extensions, shaders, and pipeline \
@@ -82,6 +92,16 @@ thanks_body = """\
 back_home = "Volver al inicio"
 not_found_message = "No hay nada aquí, deberías volver atrás..."
 footer_rights = "Todos los derechos reservados."
+about_headline = "Creamos juegos, mundos y herramientas de estudio."
+about_body = """\
+  Somos un joven estudio de software con talento para ofrecer juegos \
+  independientes extraordinarios e inspiradores, crear mundos virtuales \
+  sociales y desarrollar herramientas que ayudan a otros estudios a \
+  acelerar sus flujos de producción.\
+  """
+about_games_link = "Experiencias Independientes"
+about_ugce_link = "Experiencias UGC"
+about_tools_link = "Herramientas"
 tooling_headline = "Impulsa tu creatividad."
 tooling_body = """\
   Publicamos extensiones de editor, shaders y utilidades de producción \
@@ -122,6 +142,16 @@ thanks_body = """\
 back_home = "Retour à l'accueil"
 not_found_message = "Il n'y a rien ici, vous devriez faire demi-tour..."
 footer_rights = "Tous droits réservés."
+about_headline = "Nous créons des jeux, des mondes et des outils."
+about_body = """\
+  Nous sommes un jeune studio logiciel avec un savoir-faire pour proposer \
+  des jeux autonomes exceptionnels et inspirants, créer des mondes virtuels \
+  sociaux et concevoir des outils aidant d'autres studios à accélérer leurs \
+  pipelines de production.\
+  """
+about_games_link = "Expériences Autonomes"
+about_ugce_link = "Expériences UGC"
+about_tools_link = "Outils"
 tooling_headline = "Libérez votre créativité."
 tooling_body = """\
   Nous publions des extensions d'éditeur, des shaders et des utilitaires \
@@ -162,6 +192,16 @@ thanks_body = """\
 back_home = "Zurück zur Startseite"
 not_found_message = "Hier gibt es nichts, du solltest umkehren..."
 footer_rights = "Alle Rechte vorbehalten."
+about_headline = "Wir entwickeln Spiele, Welten und Studio-Tools."
+about_body = """\
+  Wir sind ein aufstrebendes Softwarestudio mit einem Gespür für \
+  außergewöhnliche und inspirierende eigenständige Spiele, soziale \
+  virtuelle Welten sowie die Entwicklung von Tools, mit denen andere \
+  Studios ihre Produktionspipelines beschleunigen.\
+  """
+about_games_link = "Eigenständige Erlebnisse"
+about_ugce_link = "UGC-Erlebnisse"
+about_tools_link = "Tools"
 tooling_headline = "Entfalte deine Kreativität."
 tooling_body = """\
   Wir veröffentlichen produktionsreife Editor-Erweiterungen, Shader und \
@@ -202,6 +242,15 @@ thanks_body = """\
 back_home = "ホームに戻る"
 not_found_message = "ページが見つかりません。"
 footer_rights = "All rights reserved."
+about_headline = "私たちはゲーム、ワールド、開発ツールを創っています。"
+about_body = """\
+  私たちは、傑出した刺激的なスタンドアロンゲームの提供、ソーシャルな仮想\
+  ワールドの制作、そして他スタジオの制作パイプラインを加速させるツール開発を\
+  得意とする新進気鋭のソフトウェアスタジオです。\
+  """
+about_games_link = "スタンドアロン体験"
+about_ugce_link = "UGC体験"
+about_tools_link = "ツール"
 tooling_headline = "創造力を解き放つ。"
 tooling_body = """\
   スタジオの制作ワークフローを加速させる、実用的なエディタ拡張機能、\
