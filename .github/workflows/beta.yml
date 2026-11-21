@@ -30,6 +30,14 @@ jobs:
           node-version: "22"
           package-manager-cache: false
 
+      - name: Typecheck and compile TypeScript
+        run: |
+          if [ -f package.json ]; then
+            yarn install --frozen-lockfile
+            yarn typecheck
+            yarn build
+          fi
+
       - name: Install Zola 0.23.6
         run: |
           ZOLA_URL="https://github.com/getzola/zola/releases/download"
