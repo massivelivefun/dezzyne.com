@@ -246,6 +246,63 @@ a {
   display: none;
 }
 
+.about-body {
+  width: 100%;
+  min-height: 19.5rem;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.about-headline {
+  margin-top: 0;
+  margin-bottom: 1.35rem;
+  color: #f0f0f0;
+  font-size: clamp(1.7rem, 3.6vw, 2.45rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  text-box-trim: trim-both;
+  text-box-edge: cap alphabetic;
+}
+
+.about-copy {
+  max-width: 44rem;
+  margin-top: 0;
+  margin-bottom: 2.35rem;
+  color: #dcdcdc;
+  font-size: 1.25rem;
+  line-height: 1.72;
+  text-wrap: pretty;
+}
+
+.about-pillars {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.1rem;
+}
+
+.accent-link {
+  display: inline-block;
+  width: fit-content;
+  font-size: clamp(1.05rem, 4.2vw, 1.55rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+  text-box-trim: trim-both;
+  text-box-edge: cap alphabetic;
+}
+
+.accent-link--storefront {
+  color: #b57cff;
+}
+
+.accent-link:hover,
+.accent-link:focus-visible {
+  color: #ffffff;
+}
 
 .contact-body {
   width: 100%;
@@ -291,7 +348,8 @@ a {
   }
 
   .header-nav {
-    gap: 1rem;
+    flex-wrap: wrap;
+    gap: 0.55rem 1rem;
     font-size: 0.95rem;
   }
 

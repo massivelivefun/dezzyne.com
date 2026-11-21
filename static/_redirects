@@ -1,50 +1,52 @@
-# Redirect explicit /en paths to clean default root paths
-/en          /                  301
-/en/*        /:splat            301
+/en          /                    301
+/en/*        /:splat              301
 
-# Browser language edge routing (Spanish)
-/            /es/               302!  Language=es
-/about       /es/about/         302!  Language=es
-/about/*     /es/about/:splat   302!  Language=es
-/games       /es/games/         302!  Language=es
-/games/*     /es/games/:splat   302!  Language=es
-/ugce        /es/ugce/          302!  Language=es
-/ugce/*      /es/ugce/:splat    302!  Language=es
-/contact     /es/contact/       302!  Language=es
-/contact/*   /es/contact/:splat 302!  Language=es
+/            /es/                 302!  Language=es
+/about       /es/about/           302!  Language=es
+/about/*     /es/about/:splat     302!  Language=es
+/games       /es/games/           302!  Language=es
+/games/*     /es/games/:splat     302!  Language=es
+/ugce        /es/ugce/            302!  Language=es
+/ugce/*      /es/ugce/:splat      302!  Language=es
+/tooling     /es/tooling/         302!  Language=es
+/tooling/*   /es/tooling/:splat   302!  Language=es
+/contact     /es/contact/         302!  Language=es
+/contact/*   /es/contact/:splat   302!  Language=es
 
-# Browser language edge routing (French)
-/            /fr/               302!  Language=fr
-/about       /fr/about/         302!  Language=fr
-/about/*     /fr/about/:splat   302!  Language=fr
-/games       /fr/games/         302!  Language=fr
-/games/*     /fr/games/:splat   302!  Language=fr
-/ugce        /fr/ugce/          302!  Language=fr
-/ugce/*      /fr/ugce/:splat    302!  Language=fr
-/contact     /fr/contact/       302!  Language=fr
-/contact/*   /fr/contact/:splat 302!  Language=fr
+/            /fr/                 302!  Language=fr
+/about       /fr/about/           302!  Language=fr
+/about/*     /fr/about/:splat     302!  Language=fr
+/games       /fr/games/           302!  Language=fr
+/games/*     /fr/games/:splat     302!  Language=fr
+/ugce        /fr/ugce/            302!  Language=fr
+/ugce/*      /fr/ugce/:splat      302!  Language=fr
+/tooling     /fr/tooling/         302!  Language=fr
+/tooling/*   /fr/tooling/:splat   302!  Language=fr
+/contact     /fr/contact/         302!  Language=fr
+/contact/*   /fr/contact/:splat   302!  Language=fr
 
-# Browser language edge routing (German)
-/            /de/               302!  Language=de
-/about       /de/about/         302!  Language=de
-/about/*     /de/about/:splat   302!  Language=de
-/games       /de/games/         302!  Language=de
-/games/*     /de/games/:splat   302!  Language=de
-/ugce        /de/ugce/          302!  Language=de
-/ugce/*      /de/ugce/:splat    302!  Language=de
-/contact     /de/contact/       302!  Language=de
-/contact/*   /de/contact/:splat 302!  Language=de
+/            /de/                 302!  Language=de
+/about       /de/about/           302!  Language=de
+/about/*     /de/about/:splat     302!  Language=de
+/games       /de/games/           302!  Language=de
+/games/*     /de/games/:splat     302!  Language=de
+/ugce        /de/ugce/            302!  Language=de
+/ugce/*      /de/ugce/:splat      302!  Language=de
+/tooling     /de/tooling/         302!  Language=de
+/tooling/*   /de/tooling/:splat   302!  Language=de
+/contact     /de/contact/         302!  Language=de
+/contact/*   /de/contact/:splat   302!  Language=de
 
-# Browser language edge routing (Japanese)
-/            /ja/               302!  Language=ja
-/about       /ja/about/         302!  Language=ja
-/about/*     /ja/about/:splat   302!  Language=ja
-/games       /ja/games/         302!  Language=ja
-/games/*     /ja/games/:splat   302!  Language=ja
-/ugce        /ja/ugce/          302!  Language=ja
-/ugce/*      /ja/ugce/:splat    302!  Language=ja
-/contact     /ja/contact/       302!  Language=ja
-/contact/*   /ja/contact/:splat 302!  Language=ja
+/            /ja/                 302!  Language=ja
+/about       /ja/about/           302!  Language=ja
+/about/*     /ja/about/:splat     302!  Language=ja
+/games       /ja/games/           302!  Language=ja
+/games/*     /ja/games/:splat     302!  Language=ja
+/ugce        /ja/ugce/            302!  Language=ja
+/ugce/*      /ja/ugce/:splat      302!  Language=ja
+/tooling     /ja/tooling/         302!  Language=ja
+/tooling/*   /ja/tooling/:splat   302!  Language=ja
+/contact     /ja/contact/         302!  Language=ja
+/contact/*   /ja/contact/:splat   302!  Language=ja
 
-# Netlify fallback to 404.html
-/*           /404.html          404
+/*           /404.html            404

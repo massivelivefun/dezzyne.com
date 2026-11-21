@@ -19,9 +19,11 @@ language_name = "English"
 nav_about = "About"
 nav_games = "Games"
 nav_ugce = "UGCE"
+nav_tooling = "Tooling"
 nav_contact = "Contact"
 back_all_games = "All Games"
 back_all_ugce = "All UGCE"
+back_all_tooling = "All Tooling"
 label_platform = "Platform"
 form_honeypot = "Do not fill this out:"
 contact_intro = """\
@@ -40,6 +42,13 @@ thanks_body = """\
 back_home = "Back to Home"
 not_found_message = "There's nothing here, you should turn back..."
 footer_rights = "All rights reserved."
+tooling_headline = "Empower your creativity."
+tooling_body = """\
+  We publish production-ready editor extensions, shaders, and pipeline \
+  utilities built to accelerate studio workflows. Browse our official \
+  releases below.\
+  """
+tooling_unity_link = "Unity Store"
 
 [languages.es]
 title = "Dezzyne"
@@ -50,9 +59,11 @@ language_name = "Español"
 nav_about = "Acerca de"
 nav_games = "Juegos"
 nav_ugce = "UGCE"
+nav_tooling = "Herramientas"
 nav_contact = "Contacto"
 back_all_games = "Todos los juegos"
 back_all_ugce = "Todo el UGCE"
+back_all_tooling = "Todas las herramientas"
 label_platform = "Plataforma"
 form_honeypot = "No rellenes este campo:"
 contact_intro = """\
@@ -71,6 +82,13 @@ thanks_body = """\
 back_home = "Volver al inicio"
 not_found_message = "No hay nada aquí, deberías volver atrás..."
 footer_rights = "Todos los derechos reservados."
+tooling_headline = "Impulsa tu creatividad."
+tooling_body = """\
+  Publicamos extensiones de editor, shaders y utilidades de producción \
+  diseñadas para acelerar el flujo de trabajo de otros estudios. Explora \
+  nuestros lanzamientos oficiales a continuación.\
+  """
+tooling_unity_link = "Unity Store"
 
 [languages.fr]
 title = "Dezzyne"
@@ -81,9 +99,11 @@ language_name = "Français"
 nav_about = "À propos"
 nav_games = "Jeux"
 nav_ugce = "UGCE"
+nav_tooling = "Outils"
 nav_contact = "Contact"
 back_all_games = "Tous les jeux"
 back_all_ugce = "Tout l'UGCE"
+back_all_tooling = "Tous les outils"
 label_platform = "Plateforme"
 form_honeypot = "Ne remplissez pas ce champ :"
 contact_intro = """\
@@ -102,6 +122,13 @@ thanks_body = """\
 back_home = "Retour à l'accueil"
 not_found_message = "Il n'y a rien ici, vous devriez faire demi-tour..."
 footer_rights = "Tous droits réservés."
+tooling_headline = "Libérez votre créativité."
+tooling_body = """\
+  Nous publions des extensions d'éditeur, des shaders et des utilitaires \
+  de pipeline prêts pour la production afin d'accélérer les workflows des \
+  studios. Parcourez nos versions officielles ci-dessous.\
+  """
+tooling_unity_link = "Unity Store"
 
 [languages.de]
 title = "Dezzyne"
@@ -112,9 +139,11 @@ language_name = "Deutsch"
 nav_about = "Über uns"
 nav_games = "Spiele"
 nav_ugce = "UGCE"
+nav_tooling = "Tools"
 nav_contact = "Kontakt"
 back_all_games = "Alle Spiele"
 back_all_ugce = "Alle UGCE"
+back_all_tooling = "Alle Tools"
 label_platform = "Plattform"
 form_honeypot = "Dieses Feld nicht ausfüllen:"
 contact_intro = """\
@@ -133,6 +162,13 @@ thanks_body = """\
 back_home = "Zurück zur Startseite"
 not_found_message = "Hier gibt es nichts, du solltest umkehren..."
 footer_rights = "Alle Rechte vorbehalten."
+tooling_headline = "Entfalte deine Kreativität."
+tooling_body = """\
+  Wir veröffentlichen produktionsreife Editor-Erweiterungen, Shader und \
+  Pipeline-Werkzeuge, die Studio-Workflows beschleunigen. Entdecke unten \
+  unsere offiziellen Pakete.\
+  """
+tooling_unity_link = "Unity Store"
 
 [languages.ja]
 title = "Dezzyne"
@@ -143,9 +179,11 @@ language_name = "日本語"
 nav_about = "概要"
 nav_games = "ゲーム"
 nav_ugce = "UGCE"
+nav_tooling = "ツール"
 nav_contact = "お問い合わせ"
 back_all_games = "すべてのゲーム"
 back_all_ugce = "すべてのUGCE"
+back_all_tooling = "すべてのツール"
 label_platform = "プラットフォーム"
 form_honeypot = "入力しないでください:"
 contact_intro = """\
@@ -164,6 +202,16 @@ thanks_body = """\
 back_home = "ホームに戻る"
 not_found_message = "ページが見つかりません。"
 footer_rights = "All rights reserved."
+tooling_headline = "創造力を解き放つ。"
+tooling_body = """\
+  スタジオの制作ワークフローを加速させる、実用的なエディタ拡張機能、\
+  シェーダー、パイプラインツールを公開しています。公式リリースは以下から\
+  ご覧いただけます。\
+  """
+tooling_unity_link = "Unity Store"
+
+[extra]
+unity_store_url = "https://assetstore.unity.com/"
 
 [[extra.socials]]
 id = "twitter"

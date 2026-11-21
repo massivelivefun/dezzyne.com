@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ section.title }} | {{ config.title }}{% endblock title %}
+{% block content %}
+<h1 class="page-title">{{ section.title }}</h1>
+<div class="about-body">
+  <h2 class="about-headline">
+    {{- trans(key="tooling_headline", lang=lang) -}}
+  </h2>
+  <p class="about-copy">{{ trans(key="tooling_body", lang=lang) }}</p>
+  <nav class="about-pillars" aria-label="Tooling storefronts">
+    <a
+      href="{{ config.extra.unity_store_url }}"
+      class="accent-link accent-link--storefront"
+      target="_blank"
+      rel="noopener noreferrer">
+      {{- trans(key="tooling_unity_link", lang=lang) -}}
+    </a>
+  </nav>
+  {%- if section.pages | length > 0 %}
+  <ul>
+    {%- for tool in section.pages %}
+    <li><a href="{{ tool.path }}">{{ tool.title }}</a></li>
+    {%- endfor %}
+  </ul>
+  {%- endif %}
+  {{ section.content | safe }}
+</div>
+{% endblock content %}
