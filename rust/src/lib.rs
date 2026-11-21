@@ -33,6 +33,18 @@ mod ffi {
     }
 
     #[no_mangle]
+    pub extern "C" fn touch_move(
+        camera_x: f32,
+        camera_y: f32,
+        light_x: f32,
+        light_y: f32,
+    ) {
+        with_engine_mut(|engine| {
+            engine.touch_move(camera_x, camera_y, light_x, light_y);
+        });
+    }
+
+    #[no_mangle]
     pub extern "C" fn pointer_leave() {
         with_engine_mut(|engine| engine.pointer_leave());
     }

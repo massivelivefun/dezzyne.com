@@ -11,8 +11,10 @@ pub const SCENE_KEYPAD: u32 = 2;
 
 pub struct Engine {
     viewport_size: Vec2,
-    pointer_position: Vec2,
+    camera_pointer: Vec2,
+    light_pointer: Vec2,
     pointer_active: bool,
+    is_touch_pointer: bool,
     elapsed_seconds: f32,
     quality_tier: u32,
     slow_frame_seconds: f32,
@@ -33,12 +35,21 @@ pub fn with_engine_mut<R>(callback: impl FnOnce(&mut Engine) -> R) -> R {
     ENGINE.with(|cell| callback(&mut cell.borrow_mut()))
 }
 
+fn clamp_pointer(pointer_x: f32, pointer_y: f32) -> Vec2 {
+    Vec2::new(
+        pointer_x.clamp(-16384.0, 32768.0),
+        pointer_y.clamp(-16384.0, 32768.0),
+    )
+}
+
 impl Engine {
     pub fn new() -> Self {
         Self {
             viewport_size: Vec2::new(1280.0, 720.0),
-            pointer_position: Vec2::splat(-9999.0),
+            camera_pointer: Vec2::splat(-9999.0),
+            light_pointer: Vec2::splat(-9999.0),
             pointer_active: false,
+            is_touch_pointer: false,
             elapsed_seconds: 0.0,
             quality_tier: 0,
             slow_frame_seconds: 0.0,
@@ -67,18 +78,21 @@ impl Engine {
         };
         self.viewport_size = Vec2::new(clamped_width, clamped_height);
         self.pointer_active = false;
+        self.is_touch_pointer = false;
         self.quality_tier = 0;
         self.slow_frame_seconds = 0.0;
 
         self.portal_group
             .initialize_ugce_trio(scene_mode == SCENE_PORTALS, random_seed);
-        self.keypad_prop.initialize(scene_mode == SCENE_KEYPAD);
+        self.keypad_prop
+            .initialize(scene_mode == SCENE_KEYPAD, random_seed);
 
         self.grid_camera.step_camera(
             0.016,
             1.0,
             self.viewport_size,
-            self.pointer_position,
+            self.camera_pointer,
+            false,
             false,
             true,
         );
@@ -87,7 +101,7 @@ impl Engine {
             1.0,
             self.elapsed_seconds,
             self.viewport_size,
-            self.pointer_position,
+            self.light_pointer,
             false,
             &self.grid_camera,
         );
@@ -95,14 +109,15 @@ impl Engine {
             0.0,
             1.0,
             self.viewport_size,
-            self.pointer_position,
+            self.light_pointer,
             false,
             &self.grid_camera,
         );
         self.grid_camera.step_cursor_light(
             0.016,
             self.viewport_size,
-            self.pointer_position,
+            self.light_pointer,
+            false,
             false,
             None,
             true,
@@ -121,11 +136,29 @@ impl Engine {
         if !pointer_x.is_finite() || !pointer_y.is_finite() {
             return;
         }
-        self.pointer_position = Vec2::new(
-            pointer_x.clamp(-16384.0, 32768.0),
-            pointer_y.clamp(-16384.0, 32768.0),
-        );
+        let clamped = clamp_pointer(pointer_x, pointer_y);
+        self.camera_pointer = clamped;
+        self.light_pointer = clamped;
         self.pointer_active = true;
+        self.is_touch_pointer = false;
+    }
+
+    pub fn touch_move(
+        &mut self,
+        camera_x: f32,
+        camera_y: f32,
+        light_x: f32,
+        light_y: f32,
+    ) {
+        let valid_camera = camera_x.is_finite() && camera_y.is_finite();
+        let valid_light = light_x.is_finite() && light_y.is_finite();
+        if !valid_camera || !valid_light {
+            return;
+        }
+        self.camera_pointer = clamp_pointer(camera_x, camera_y);
+        self.light_pointer = clamp_pointer(light_x, light_y);
+        self.pointer_active = true;
+        self.is_touch_pointer = true;
     }
 
     pub fn pointer_leave(&mut self) {
@@ -167,8 +200,8 @@ impl Engine {
             return;
         }
         self.slow_frame_seconds += raw_delta;
-        if self.slow_frame_seconds > 1.5 && self.quality_tier == 0 {
-            self.quality_tier = 1;
+        if self.slow_frame_seconds > 1.5 && self.quality_tier < 2 {
+            self.quality_tier += 1;
             self.slow_frame_seconds = 0.0;
         }
     }
@@ -200,8 +233,9 @@ impl Engine {
             safe_delta,
             clamped_motion_scale,
             self.viewport_size,
-            self.pointer_position,
+            self.camera_pointer,
             self.pointer_active,
+            self.is_touch_pointer,
             false,
         );
 
@@ -211,7 +245,7 @@ impl Engine {
             clamped_motion_scale,
             self.elapsed_seconds,
             self.viewport_size,
-            self.pointer_position,
+            self.light_pointer,
             self.pointer_active && entities_ready,
             &self.grid_camera,
         );
@@ -219,7 +253,7 @@ impl Engine {
             entity_delta,
             clamped_motion_scale,
             self.viewport_size,
-            self.pointer_position,
+            self.light_pointer,
             self.pointer_active && entities_ready,
             &self.grid_camera,
         );
@@ -232,8 +266,9 @@ impl Engine {
         self.grid_camera.step_cursor_light(
             safe_delta,
             self.viewport_size,
-            self.pointer_position,
+            self.light_pointer,
             self.pointer_active,
+            self.is_touch_pointer,
             hovered_anchor,
             false,
         );

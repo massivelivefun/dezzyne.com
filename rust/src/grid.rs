@@ -1,4 +1,4 @@
-use glam::{EulerRot, Quat, Vec2, Vec3};
+use glam::{EulerRot, Quat, Vec2, Vec3, Vec3A};
 
 use crate::spring::Spring;
 
@@ -22,12 +22,13 @@ pub struct GridCamera {
     camera_yaw: Spring,
     camera_pitch: Spring,
     camera_roll: Spring,
-    camera_position: Vec3,
-    camera_forward: Vec3,
-    camera_right: Vec3,
-    camera_up: Vec3,
+    camera_position: Vec3A,
+    camera_forward: Vec3A,
+    camera_right: Vec3A,
+    camera_up: Vec3A,
     light_state: LightState,
     has_floor_position: bool,
+    touch_return_mode: bool,
     free_floor_xz: Vec2,
     anchor_floor_xz: Vec2,
     anchor_blend: Spring,
@@ -46,12 +47,13 @@ impl GridCamera {
             camera_yaw: Spring::new(0.0),
             camera_pitch: Spring::new(-0.14),
             camera_roll: Spring::new(0.0),
-            camera_position: Vec3::ZERO,
-            camera_forward: Vec3::Z,
-            camera_right: Vec3::X,
-            camera_up: Vec3::Y,
+            camera_position: Vec3A::ZERO,
+            camera_forward: Vec3A::Z,
+            camera_right: Vec3A::X,
+            camera_up: Vec3A::Y,
             light_state: LightState::Hidden,
             has_floor_position: false,
+            touch_return_mode: false,
             free_floor_xz: Vec2::new(0.0, 8.0),
             anchor_floor_xz: Vec2::new(0.0, 4.35),
             anchor_blend: Spring::new(0.0),
@@ -75,22 +77,27 @@ impl GridCamera {
         yaw: f32,
         pitch: f32,
         roll: f32,
-    ) -> (Vec3, Vec3, Vec3) {
+    ) -> (Vec3A, Vec3A, Vec3A) {
         let rotation = Quat::from_euler(EulerRot::YXZ, yaw, -pitch, roll);
-        (rotation * Vec3::X, rotation * Vec3::Y, rotation * Vec3::Z)
+        (rotation * Vec3A::X, rotation * Vec3A::Y, rotation * Vec3A::Z)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn update_camera_targets(
         &mut self,
         delta_seconds: f32,
         safe_viewport: Vec2,
         pointer_position: Vec2,
         pointer_active: bool,
+        is_touch_pointer: bool,
         narrowness: f32,
         base_pitch: f32,
     ) {
+        let active_hold = f32::from(is_touch_pointer) * 2.50
+            + f32::from(!is_touch_pointer) * (narrowness * 0.50);
         if pointer_active {
-            self.release_hold_seconds = narrowness * 0.50;
+            self.touch_return_mode = is_touch_pointer;
+            self.release_hold_seconds = active_hold;
             let normalized_pointer = (((pointer_position / safe_viewport)
                 - Vec2::splat(0.5))
                 * 2.0)
@@ -135,6 +142,7 @@ impl GridCamera {
             self.camera_pitch.snap(self.camera_pitch.target);
             self.camera_roll.snap(self.camera_roll.target);
             self.release_hold_seconds = 0.0;
+            self.touch_return_mode = false;
             self.light_state = LightState::Hidden;
             self.has_floor_position = false;
             self.anchor_blend.snap(0.0);
@@ -150,12 +158,13 @@ impl GridCamera {
             return;
         }
 
-        let pos_stiffness = 24.0 - narrowness * 21.8;
-        let pos_damping = 9.8 - narrowness * 6.6;
-        let rot_stiffness = 22.0 - narrowness * 20.0;
-        let rot_damping = 9.4 - narrowness * 6.3;
-        let roll_stiffness = 20.0 - narrowness * 18.2;
-        let roll_damping = 8.9 - narrowness * 6.0;
+        let slow_return = narrowness.max(f32::from(self.touch_return_mode));
+        let pos_stiffness = 24.0 - slow_return * 21.8;
+        let pos_damping = 9.8 - slow_return * 6.6;
+        let rot_stiffness = 22.0 - slow_return * 20.0;
+        let rot_damping = 9.4 - slow_return * 6.3;
+        let roll_stiffness = 20.0 - slow_return * 18.2;
+        let roll_damping = 8.9 - slow_return * 6.0;
 
         self.camera_position_x
             .step(delta_seconds, pos_stiffness, pos_damping);
@@ -169,6 +178,7 @@ impl GridCamera {
             .step(delta_seconds, roll_stiffness, roll_damping);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn step_camera(
         &mut self,
         delta_seconds: f32,
@@ -176,6 +186,7 @@ impl GridCamera {
         viewport_size: Vec2,
         pointer_position: Vec2,
         pointer_active: bool,
+        is_touch_pointer: bool,
         should_snap: bool,
     ) {
         let safe_viewport = viewport_size.max(Vec2::ONE);
@@ -190,6 +201,7 @@ impl GridCamera {
             safe_viewport,
             pointer_position,
             pointer_active,
+            is_touch_pointer,
             narrowness,
             base_pitch,
         );
@@ -209,7 +221,7 @@ impl GridCamera {
             self.camera_pitch.position,
             self.camera_roll.position,
         );
-        self.camera_position = Vec3::new(
+        self.camera_position = Vec3A::new(
             self.camera_position_x.position,
             self.camera_position_y.position,
             0.0,
@@ -243,7 +255,7 @@ impl GridCamera {
         &self,
         screen_point: Vec2,
         viewport_size: Vec2,
-    ) -> (Vec3, Vec3) {
+    ) -> (Vec3A, Vec3A) {
         let safe_viewport = viewport_size.max(Vec2::ONE);
         let half_height = (safe_viewport.y * 0.5).max(1.0);
         let horizontal_tangent =
@@ -309,9 +321,11 @@ impl GridCamera {
         &mut self,
         delta_seconds: f32,
         ray_floor_xz: Vec2,
+        is_touch_pointer: bool,
     ) -> f32 {
+        let follow_speed = 18.0 + f32::from(is_touch_pointer) * 26.0;
         let interpolation_factor = if self.has_floor_position {
-            (delta_seconds * 18.0).clamp(0.0, 1.0)
+            (delta_seconds * follow_speed).clamp(0.0, 1.0)
         } else {
             1.0
         };
@@ -332,6 +346,7 @@ impl GridCamera {
         &mut self,
         delta_seconds: f32,
         pointer_active: bool,
+        is_touch_pointer: bool,
         ray_hits_floor: bool,
         ray_floor_xz: Vec2,
         hovered_anchor: Option<Vec2>,
@@ -341,7 +356,11 @@ impl GridCamera {
         }
 
         if ray_hits_floor {
-            return self.track_light_on_floor(delta_seconds, ray_floor_xz);
+            return self.track_light_on_floor(
+                delta_seconds,
+                ray_floor_xz,
+                is_touch_pointer,
+            );
         }
 
         if pointer_active && self.has_floor_position {
@@ -361,12 +380,14 @@ impl GridCamera {
         0.0
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn step_cursor_light(
         &mut self,
         delta_seconds: f32,
         viewport_size: Vec2,
         pointer_position: Vec2,
         pointer_active: bool,
+        is_touch_pointer: bool,
         hovered_anchor: Option<Vec2>,
         should_snap: bool,
     ) {
@@ -378,6 +399,7 @@ impl GridCamera {
         let glow_target = self.update_light_target(
             delta_seconds,
             pointer_active,
+            is_touch_pointer,
             ray_hits_floor,
             ray_floor_xz,
             hovered_anchor,
@@ -408,7 +430,8 @@ impl GridCamera {
         viewport_size: Vec2,
     ) -> (Vec2, f32) {
         let safe_viewport = viewport_size.max(Vec2::ONE);
-        let camera_relative = world_position - self.camera_position;
+        let camera_relative =
+            Vec3A::from(world_position) - self.camera_position;
 
         let camera_x = camera_relative.dot(self.camera_right);
         let camera_y = camera_relative.dot(self.camera_up);
@@ -444,13 +467,13 @@ mod tests {
             let (pitch_sine, pitch_cosine) = pitch.sin_cos();
             let (roll_sine, roll_cosine) = roll.sin_cos();
 
-            let expected_forward = Vec3::new(
+            let expected_forward = Vec3A::new(
                 yaw_sine * pitch_cosine,
                 pitch_sine,
                 yaw_cosine * pitch_cosine,
             );
-            let unrolled_right = Vec3::new(yaw_cosine, 0.0, -yaw_sine);
-            let unrolled_up = Vec3::new(
+            let unrolled_right = Vec3A::new(yaw_cosine, 0.0, -yaw_sine);
+            let unrolled_up = Vec3A::new(
                 -pitch_sine * yaw_sine,
                 pitch_cosine,
                 -pitch_sine * yaw_cosine,

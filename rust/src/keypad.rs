@@ -1,13 +1,15 @@
-use std::f32::consts::TAU;
+use std::f32::consts::{PI, TAU};
 
-use glam::{Quat, Vec2, Vec3};
+use glam::{Quat, Vec2, Vec3A};
+use rand::rngs::SmallRng;
+use rand::{RngExt, SeedableRng};
 
 use crate::grid::GridCamera;
 use crate::spring::Spring;
 
 pub const KEYPAD_FLOATS: usize = 16;
 
-const KEYPAD_WORLD_POSITION: Vec3 = Vec3::new(0.0, -0.56, 4.35);
+const KEYPAD_WORLD_POSITION: Vec3A = Vec3A::new(0.0, -0.56, 4.35);
 const BASE_MILLIMETERS_PER_UNIT: f32 = 64.0;
 const BASE_TILT_RADIANS: f32 = 0.56;
 const SWING_ANGULAR_SPEED: f32 = 0.46;
@@ -19,10 +21,10 @@ pub struct KeypadProp {
     swing_phase: f32,
     scale_spring: Spring,
     hover_glow: Spring,
-    world_position: Vec3,
-    local_axis_x: Vec3,
-    local_axis_y: Vec3,
-    local_axis_z: Vec3,
+    world_position: Vec3A,
+    local_axis_x: Vec3A,
+    local_axis_y: Vec3A,
+    local_axis_z: Vec3A,
     millimeters_per_unit: f32,
     uniform_buffer: [f32; KEYPAD_FLOATS],
 }
@@ -36,25 +38,36 @@ impl KeypadProp {
             scale_spring: Spring::new(0.0),
             hover_glow: Spring::new(0.0),
             world_position: KEYPAD_WORLD_POSITION,
-            local_axis_x: Vec3::X,
-            local_axis_y: Vec3::Y,
-            local_axis_z: Vec3::NEG_Z,
+            local_axis_x: Vec3A::X,
+            local_axis_y: Vec3A::Y,
+            local_axis_z: Vec3A::NEG_Z,
             millimeters_per_unit: BASE_MILLIMETERS_PER_UNIT,
             uniform_buffer: [0.0; KEYPAD_FLOATS],
         }
     }
 
-    pub fn initialize(&mut self, is_enabled: bool) {
+    pub fn initialize(&mut self, is_enabled: bool, random_seed: u32) {
         self.is_enabled = is_enabled;
         self.is_hovered = false;
-        self.swing_phase = -0.45;
         self.hover_glow.snap(0.0);
 
         if !is_enabled {
+            self.swing_phase = 0.0;
             self.scale_spring.snap(0.0);
             self.uniform_buffer = [0.0; KEYPAD_FLOATS];
             return;
         }
+        let keypad_seed = u64::from(random_seed) ^ 0xA5A5_5A5A_u64;
+        let mut random_generator = SmallRng::seed_from_u64(keypad_seed);
+        let signed_ratio: f32 = random_generator.random_range(-1.0..=1.0);
+        let reverse_swing: bool = random_generator.random_bool(0.5);
+        let principal_phase = signed_ratio.clamp(-1.0, 1.0).asin();
+        let raw_phase = if reverse_swing {
+            PI - principal_phase
+        } else {
+            principal_phase
+        };
+        self.swing_phase = raw_phase.rem_euclid(TAU);
         self.scale_spring.position = 0.08;
         self.scale_spring.velocity = 0.0;
         self.scale_spring.target = 1.0;
@@ -66,24 +79,24 @@ impl KeypadProp {
 
     fn ray_intersects_bounds(
         &self,
-        world_ray_origin: Vec3,
-        world_ray_direction: Vec3,
+        world_ray_origin: Vec3A,
+        world_ray_direction: Vec3A,
     ) -> bool {
         let world_offset = world_ray_origin - self.world_position;
         let relative_origin = world_offset * self.millimeters_per_unit;
-        let local_origin = Vec3::new(
+        let local_origin = Vec3A::new(
             relative_origin.dot(self.local_axis_x),
             relative_origin.dot(self.local_axis_y),
             relative_origin.dot(self.local_axis_z) + 6.0,
         );
-        let local_direction = Vec3::new(
+        let local_direction = Vec3A::new(
             world_ray_direction.dot(self.local_axis_x),
             world_ray_direction.dot(self.local_axis_y),
             world_ray_direction.dot(self.local_axis_z),
         );
 
-        let bounds_minimum = Vec3::new(-61.0, -61.0, -0.5);
-        let bounds_maximum = Vec3::new(61.0, 61.0, 19.0);
+        let bounds_minimum = Vec3A::new(-61.0, -61.0, -0.5);
+        let bounds_maximum = Vec3A::new(61.0, 61.0, 19.0);
         let mut entry_distance = 0.0_f32;
         let mut exit_distance = 1200.0_f32;
 
@@ -172,7 +185,7 @@ impl KeypadProp {
         let vertical_bob =
             (self.swing_phase * 2.0).cos() * 0.025 * motion_scale;
         self.world_position =
-            KEYPAD_WORLD_POSITION + Vec3::new(0.0, vertical_bob, 0.0);
+            KEYPAD_WORLD_POSITION + Vec3A::new(0.0, vertical_bob, 0.0);
 
         let yaw_radians =
             self.swing_phase.sin() * MAXIMUM_SWING_YAW * motion_scale;
@@ -181,12 +194,12 @@ impl KeypadProp {
         let (tilt_sine, tilt_cosine) = tilt_radians.sin_cos();
 
         let yaw_rotation = Quat::from_rotation_y(yaw_radians);
-        self.local_axis_x = (yaw_rotation * Vec3::X).normalize_or_zero();
+        self.local_axis_x = (yaw_rotation * Vec3A::X).normalize_or_zero();
         self.local_axis_y = (yaw_rotation
-            * Vec3::new(0.0, tilt_cosine, tilt_sine))
+            * Vec3A::new(0.0, tilt_cosine, tilt_sine))
         .normalize_or_zero();
         self.local_axis_z = (yaw_rotation
-            * Vec3::new(0.0, tilt_sine, -tilt_cosine))
+            * Vec3A::new(0.0, tilt_sine, -tilt_cosine))
         .normalize_or_zero();
 
         self.is_hovered = pointer_active

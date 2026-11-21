@@ -48,7 +48,7 @@ impl PortalConfiguration {
 
 #[derive(Clone, Copy)]
 struct Particle {
-    angle: f32,
+    unit_direction: Vec2,
     radial_distance: f32,
     inward_speed: f32,
     radius_pixels: f32,
@@ -60,7 +60,7 @@ struct Particle {
 impl Particle {
     const fn zero() -> Self {
         Self {
-            angle: 0.0,
+            unit_direction: Vec2::X,
             radial_distance: 1.4,
             inward_speed: 0.3,
             radius_pixels: 3.0,
@@ -163,7 +163,7 @@ impl PortalEntity {
         let twinkle_phase = random_generator.random_range(0.0..TAU);
 
         self.particles[particle_index] = Particle {
-            angle,
+            unit_direction: Vec2::from_angle(angle),
             radial_distance,
             inward_speed,
             radius_pixels,
@@ -309,7 +309,7 @@ impl PortalEntity {
                 self.particles[particle_index] = particle;
             }
 
-            let radial_vector = Vec2::from_angle(particle.angle) * base_radii;
+            let radial_vector = particle.unit_direction * base_radii;
             let screen_position =
                 portal_center + radial_vector * particle.radial_distance;
             let inward_direction = (-radial_vector).normalize_or_zero();
