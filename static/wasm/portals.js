@@ -9,7 +9,7 @@ const LABEL_TEXTURE_WIDTH = 640;
 const LABEL_TEXTURE_HEIGHT = 298;
 const LABEL_RENDER_SCALE = LABEL_TEXTURE_WIDTH / DESIGN_WIDTH;
 const LABEL_ASPECT_RATIO = DESIGN_WIDTH / DESIGN_HEIGHT;
-const LABEL_FONT_FAMILY = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+const LABEL_FONT_FAMILY = '"Helvetica Neue", Helvetica, "Inter", sans-serif';
 
 export const PORTAL_FRAGMENT_SHADER_SOURCE = `#version 300 es
 precision highp float;
@@ -611,7 +611,7 @@ function paintDynamicLabel(
 }
 
 export function createLabelManager(glContext) {
-    const staticChromeCanvas = buildStaticChromeCanvas();
+    let staticChromeCanvas = buildStaticChromeCanvas();
     const workCanvas = document.createElement("canvas");
     workCanvas.width = LABEL_TEXTURE_WIDTH;
     workCanvas.height = LABEL_TEXTURE_HEIGHT;
@@ -621,6 +621,25 @@ export function createLabelManager(glContext) {
     }
 
     const labelSlots = [];
+    let isDisposed = false;
+
+    function refreshFontLabels() {
+        if (isDisposed) {
+            return;
+        }
+        const refreshedChromeCanvas = buildStaticChromeCanvas();
+        if (!refreshedChromeCanvas) {
+            return;
+        }
+        staticChromeCanvas = refreshedChromeCanvas;
+        for (let slotIndex = 0; slotIndex < labelSlots.length; slotIndex++) {
+            labelSlots[slotIndex].isReady = false;
+        }
+    }
+
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(refreshFontLabels);
+    }
 
     function allocateTexture() {
         const texture = glContext.createTexture();
@@ -712,6 +731,7 @@ export function createLabelManager(glContext) {
             }
         },
         dispose() {
+            isDisposed = true;
             for (
                 let slotIndex = 0;
                 slotIndex < labelSlots.length;
