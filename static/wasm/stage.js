@@ -1562,11 +1562,14 @@ function initializeStage() {
         devicePixelRatio = maximumDevicePixelRatio;
         const targetWidth = clampStageDimension(cssWidth * devicePixelRatio);
         const targetHeight = clampStageDimension(cssHeight * devicePixelRatio);
-        if (stage.width !== targetWidth || stage.height !== targetHeight) {
+        const didResizeBuffer =
+            stage.width !== targetWidth || stage.height !== targetHeight;
+        if (didResizeBuffer) {
             stage.width = targetWidth;
             stage.height = targetHeight;
         }
         applyFallbackWideFraming(fallbackCameraBuffer, cssWidth, cssHeight);
+        return didResizeBuffer;
     }
 
     measureStageContainer();
@@ -1639,13 +1642,73 @@ function initializeStage() {
 
     INITIAL_WASM_PROMISE.then(attachLoadedWasm);
 
+    const motionScale = 1.0;
+
+    function drawCurrentWasmViews() {
+        const cameraView = readFloat32View(
+            wasmExports.memory,
+            wasmExports.get_camera_pointer(),
+            CAMERA_FLOATS
+        );
+        const keypadView = readFloat32View(
+            wasmExports.memory,
+            wasmExports.get_keypad_pointer(),
+            KEYPAD_FLOATS
+        );
+        const portalViews = readPortalFrameViews(
+            wasmExports,
+            stageRenderer,
+            portalCount,
+            particleCount
+        );
+        if (!cameraView || !keypadView || !portalViews) {
+            return false;
+        }
+        return stageRenderer.render(
+            cssWidth,
+            cssHeight,
+            devicePixelRatio,
+            cameraView,
+            keypadView,
+            portalCount,
+            portalViews.portalsView,
+            portalViews.ringsView,
+            particleCount,
+            portalViews.particlesView
+        );
+    }
+
+    function redrawAfterResize() {
+        if (!wasmExports) {
+            stageRenderer.render(
+                cssWidth,
+                cssHeight,
+                devicePixelRatio,
+                fallbackCameraBuffer,
+                null,
+                0,
+                null,
+                null,
+                0,
+                null
+            );
+            return;
+        }
+        const entitiesReady = stageRenderer.areEntitiesReady() ? 1 : 0;
+        wasmExports.step_scene(0.0001, motionScale, entitiesReady);
+        drawCurrentWasmViews();
+    }
+
     function synchronizeStageSize() {
         if (isStopped) {
             return;
         }
-        measureStageContainer();
+        const didResizeBuffer = measureStageContainer();
         if (wasmExports) {
             wasmExports.resize_scene(cssWidth, cssHeight);
+        }
+        if (didResizeBuffer) {
+            redrawAfterResize();
         }
     }
 
@@ -2016,8 +2079,6 @@ function initializeStage() {
 
     registerStageClickNavigation();
 
-    const motionScale = 1.0;
-
     function renderFallbackGridFrame(deltaSeconds) {
         fallbackCameraBuffer[7] =
             (fallbackCameraBuffer[7] + deltaSeconds * 0.85 * motionScale) %
@@ -2071,7 +2132,8 @@ function initializeStage() {
             );
             if (qualityTier >= 1 && maximumDevicePixelRatio > 1) {
                 maximumDevicePixelRatio = 1;
-                synchronizeStageSize();
+                measureStageContainer();
+                wasmExports.resize_scene(cssWidth, cssHeight);
             }
 
             if (sceneMode !== SCENE_GRID) {
@@ -2083,40 +2145,7 @@ function initializeStage() {
                 synchronizeStageLink();
             }
 
-            const cameraView = readFloat32View(
-                wasmExports.memory,
-                wasmExports.get_camera_pointer(),
-                CAMERA_FLOATS
-            );
-            const keypadView = readFloat32View(
-                wasmExports.memory,
-                wasmExports.get_keypad_pointer(),
-                KEYPAD_FLOATS
-            );
-            const portalViews = readPortalFrameViews(
-                wasmExports,
-                stageRenderer,
-                portalCount,
-                particleCount
-            );
-            if (!cameraView || !keypadView || !portalViews) {
-                shutdownToFallback();
-                return;
-            }
-
-            const renderedScene = stageRenderer.render(
-                cssWidth,
-                cssHeight,
-                devicePixelRatio,
-                cameraView,
-                keypadView,
-                portalCount,
-                portalViews.portalsView,
-                portalViews.ringsView,
-                particleCount,
-                portalViews.particlesView
-            );
-            if (!renderedScene) {
+            if (!drawCurrentWasmViews()) {
                 shutdownToFallback();
                 return;
             }
