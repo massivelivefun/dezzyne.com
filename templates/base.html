@@ -68,6 +68,13 @@
         class="stage"
         {%- block stage_attributes %}{% endblock stage_attributes %}
         aria-hidden="true"></canvas>
+      <div id="stage-surface" class="stage-surface" aria-hidden="true"></div>
+      <a
+        id="stage-link"
+        class="stage-link"
+        draggable="false"
+        tabindex="-1"
+        aria-hidden="true"></a>
       <main class="container site-main">
         {% block content %}{% endblock content %}
       </main>

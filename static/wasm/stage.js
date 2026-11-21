@@ -1457,6 +1457,17 @@ function initializeStage() {
         return;
     }
 
+    const stageSurface = document.getElementById("stage-surface");
+    if (!(stageSurface instanceof HTMLElement)) {
+        return;
+    }
+
+    const stageLinkElement = document.getElementById("stage-link");
+    const stageLink =
+        stageLinkElement instanceof HTMLAnchorElement
+            ? stageLinkElement
+            : null;
+
     const sceneMode = resolveSceneMode(stage);
     let shaderModulePromise = null;
     if (sceneMode === SCENE_KEYPAD) {
@@ -1611,6 +1622,60 @@ function initializeStage() {
 
     const resizeObserver = new ResizeObserver(synchronizeStageSize);
 
+    let activeStageLinkHref = "";
+    let isMousePointerActive = false;
+    const defaultTargetHref =
+        stage.getAttribute("data-target-href") ||
+        stage.getAttribute("data-portal-href") ||
+        "";
+
+    function resolveEntityTargetHref(hitEntityIndex) {
+        if (sceneMode === SCENE_GRID || hitEntityIndex < 0) {
+            return "";
+        }
+        const entityAttribute = `data-portal-${hitEntityIndex}-href`;
+        const candidateHref =
+            stage.getAttribute(entityAttribute) || defaultTargetHref;
+        const isSafeRelativePath =
+            candidateHref.startsWith("/") && !candidateHref.startsWith("//");
+        if (!isSafeRelativePath) {
+            return "";
+        }
+        return candidateHref;
+    }
+
+    function applyStageLinkHref(nextHref) {
+        if (!stageLink || nextHref === activeStageLinkHref) {
+            return;
+        }
+        activeStageLinkHref = nextHref;
+        if (!nextHref) {
+            stageLink.classList.remove("stage-link--active");
+            stageLink.removeAttribute("href");
+            return;
+        }
+        stageLink.setAttribute("href", nextHref);
+        stageLink.classList.add("stage-link--active");
+    }
+
+    function synchronizeStageLink() {
+        const canHitEntities =
+            !isStopped &&
+            isMousePointerActive &&
+            Boolean(pendingPointerPosition) &&
+            Boolean(wasmExports) &&
+            stageRenderer.areEntitiesReady();
+        if (!canHitEntities) {
+            applyStageLinkHref("");
+            return;
+        }
+        const hitEntityIndex = wasmExports.click_stage(
+            pendingPointerPosition[0],
+            pendingPointerPosition[1]
+        );
+        applyStageLinkHref(resolveEntityTargetHref(hitEntityIndex));
+    }
+
     function shutdownToFallback() {
         if (isStopped) {
             return;
@@ -1619,6 +1684,7 @@ function initializeStage() {
         cancelAnimationFrame(animationFrameId);
         abortController.abort();
         resizeObserver.disconnect();
+        applyStageLinkHref("");
         stageContainer.classList.remove("site-stage--interactive-hover");
         stage.classList.remove("stage--ready");
         stageRenderer.dispose();
@@ -1648,7 +1714,9 @@ function initializeStage() {
     }
 
     function sendPointerLeave() {
+        isMousePointerActive = false;
         pendingPointerPosition = null;
+        applyStageLinkHref("");
         if (wasmExports) {
             wasmExports.pointer_leave();
         }
@@ -1668,7 +1736,15 @@ function initializeStage() {
         sendPointerLeave();
     }
 
-    stage.addEventListener(
+    function isDirectStageTarget(eventTarget) {
+        return (
+            eventTarget === stageSurface ||
+            eventTarget === stageLink ||
+            eventTarget === stageContainer
+        );
+    }
+
+    stageSurface.addEventListener(
         "touchmove",
         (touchEvent) => {
             if (activeTouchPointerId === null || !touchEvent.cancelable) {
@@ -1679,7 +1755,7 @@ function initializeStage() {
         { passive: false, signal: abortSignal }
     );
 
-    stage.addEventListener(
+    stageSurface.addEventListener(
         "pointerdown",
         (pointerEvent) => {
             if (isStopped || pointerEvent.pointerType !== "touch") {
@@ -1694,15 +1770,45 @@ function initializeStage() {
             ) {
                 return;
             }
+            isMousePointerActive = false;
+            applyStageLinkHref("");
             activeTouchPointerId = pointerEvent.pointerId;
             touchStartX = pointerEvent.clientX;
             touchStartY = pointerEvent.clientY;
             isTouchDragging = false;
             try {
-                stage.setPointerCapture(pointerEvent.pointerId);
+                stageSurface.setPointerCapture(pointerEvent.pointerId);
             } catch {}
         },
         { passive: true, signal: abortSignal }
+    );
+
+    stageContainer.addEventListener(
+        "pointerdown",
+        (pointerEvent) => {
+            if (isStopped || pointerEvent.pointerType === "touch") {
+                return;
+            }
+            if (
+                !Number.isFinite(pointerEvent.clientX) ||
+                !Number.isFinite(pointerEvent.clientY)
+            ) {
+                return;
+            }
+            if (!isDirectStageTarget(pointerEvent.target)) {
+                isMousePointerActive = false;
+                applyStageLinkHref("");
+                return;
+            }
+            const containerBounds = stageContainer.getBoundingClientRect();
+            isMousePointerActive = true;
+            sendPointerMove(
+                pointerEvent.clientX - containerBounds.left,
+                pointerEvent.clientY - containerBounds.top
+            );
+            synchronizeStageLink();
+        },
+        { capture: true, passive: true, signal: abortSignal }
     );
 
     stageContainer.addEventListener(
@@ -1735,11 +1841,16 @@ function initializeStage() {
                 pointerEvent.clientX - containerBounds.left,
                 pointerEvent.clientY - containerBounds.top
             );
+            if (isTouch) {
+                return;
+            }
+            isMousePointerActive = isDirectStageTarget(pointerEvent.target);
+            synchronizeStageLink();
         },
         { passive: true, signal: abortSignal }
     );
 
-    stage.addEventListener(
+    stageSurface.addEventListener(
         "pointerup",
         (pointerEvent) => {
             if (pointerEvent.pointerType !== "touch") {
@@ -1750,7 +1861,7 @@ function initializeStage() {
         { passive: true, signal: abortSignal }
     );
 
-    stage.addEventListener(
+    stageSurface.addEventListener(
         "pointercancel",
         (pointerEvent) => {
             if (pointerEvent.pointerType !== "touch") {
@@ -1761,7 +1872,7 @@ function initializeStage() {
         { passive: true, signal: abortSignal }
     );
 
-    stage.addEventListener(
+    stageSurface.addEventListener(
         "lostpointercapture",
         (pointerEvent) => {
             endTouchInteraction(pointerEvent.pointerId);
@@ -1784,14 +1895,18 @@ function initializeStage() {
         if (sceneMode === SCENE_GRID) {
             return;
         }
-        const defaultHref =
-            stage.getAttribute("data-target-href") ||
-            stage.getAttribute("data-portal-href") ||
-            "";
         stageContainer.addEventListener(
             "click",
             (clickEvent) => {
-                if (isStopped || !wasmExports || clickEvent.button !== 0) {
+                if (
+                    isStopped ||
+                    !wasmExports ||
+                    clickEvent.button !== 0 ||
+                    clickEvent.target === stageLink
+                ) {
+                    return;
+                }
+                if (!isDirectStageTarget(clickEvent.target)) {
                     return;
                 }
                 const validClientX = Number.isFinite(clickEvent.clientX);
@@ -1803,15 +1918,8 @@ function initializeStage() {
                 const stageX = clickEvent.clientX - containerBounds.left;
                 const stageY = clickEvent.clientY - containerBounds.top;
                 const hitEntityIndex = wasmExports.click_stage(stageX, stageY);
-                if (hitEntityIndex < 0) {
-                    return;
-                }
-                const entityAttr = `data-portal-${hitEntityIndex}-href`;
-                const targetHref =
-                    stage.getAttribute(entityAttr) || defaultHref;
-                const isSafeRelativePath =
-                    targetHref.startsWith("/") && !targetHref.startsWith("//");
-                if (!isSafeRelativePath) {
+                const targetHref = resolveEntityTargetHref(hitEntityIndex);
+                if (!targetHref) {
                     return;
                 }
                 window.location.assign(targetHref);
@@ -1886,6 +1994,7 @@ function initializeStage() {
                     "site-stage--interactive-hover",
                     isHovered
                 );
+                synchronizeStageLink();
             }
 
             const cameraView = readFloat32View(
