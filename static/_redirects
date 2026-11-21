@@ -49,4 +49,10 @@
 /contact     /ja/contact/         302!  Language=ja
 /contact/*   /ja/contact/:splat   302!  Language=ja
 
-/*           /404.html            404
+/404.html    /404/                301!
+
+/es/*        /es/404/             404
+/fr/*        /fr/404/             404
+/de/*        /de/404/             404
+/ja/*        /ja/404/             404
+/*           /404/                404

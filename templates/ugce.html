@@ -3,9 +3,14 @@
     <link rel="modulepreload" href="/wasm/portals.js">
 {%- endblock head_preload %}
 {% block title %}{{ section.title }} | {{ config.title }}{% endblock title %}
-{% block stage_attributes %}
+{% block stage_attributes -%}
+  {%- if lang == config.default_language -%}
+    {%- set language_prefix = "" -%}
+  {%- else -%}
+    {%- set language_prefix = "/" ~ lang -%}
+  {%- endif %}
         data-scene="portals"
-        data-target-href="/404.html"
+        data-target-href="{{ language_prefix }}/404/"
 {%- endblock stage_attributes %}
 {% block content %}
 <h1 class="page-title">{{ section.title }}</h1>
