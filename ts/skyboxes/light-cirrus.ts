@@ -8,7 +8,7 @@ import {
 const CIRRUS_MAIN_BODY: GlslSnippet = asGlslSnippet(`
     float skyMask = smoothstep(-0.02, 0.14, elevation);
 
-    vec3 floorHorizon = vec3(0.1686, 0.174, 0.188);
+    vec3 floorHorizon = vec3(0.835, 0.850, 0.878);
     vec3 dayHorizon = vec3(0.685, 0.805, 0.945);
     vec3 midDayBlue = vec3(0.455, 0.655, 0.905);
     vec3 zenithAzure = vec3(0.285, 0.495, 0.815);

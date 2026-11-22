@@ -8,7 +8,7 @@ import {
 const DAWN_MAIN_BODY: GlslSnippet = asGlslSnippet(`
     float skyMask = smoothstep(-0.02, 0.10, elevation);
 
-    vec3 stageHorizon = vec3(0.1686, 0.170, 0.180);
+    vec3 stageHorizon = vec3(0.845, 0.848, 0.870);
     vec3 dawnApricot = vec3(0.895, 0.695, 0.585);
     vec3 morningRose = vec3(0.695, 0.665, 0.815);
     vec3 morningBlue = vec3(0.395, 0.585, 0.845);

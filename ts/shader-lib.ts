@@ -26,6 +26,7 @@ export type GlslSnippet = Branded<string, "GlslSnippet">;
 export type SafeRelativeHref = Branded<string, "SafeRelativeHref">;
 
 export type QualityTier = 0 | 1 | 2;
+export type LightModeUniform = 0 | 1;
 export type WasmBooleanFlag = 0 | 1;
 
 export type DarkSkyboxId = "dark-nebula" | "dark-aurora" | "dark-twilight";

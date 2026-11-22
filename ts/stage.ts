@@ -40,6 +40,7 @@ import {
     type ElementCount,
     type GlslSource,
     type KeypadUniformBuffer,
+    type LightModeUniform,
     type LightSkyboxId,
     type Milliseconds,
     type ParticlesInstanceBuffer,
@@ -162,6 +163,7 @@ interface GridUniformLocations {
     readonly resolution: WebGLUniformLocation | null;
     readonly devicePixelRatio: WebGLUniformLocation | null;
     readonly camera: WebGLUniformLocation | null;
+    readonly lightMode: WebGLUniformLocation | null;
     readonly skyboxMix: WebGLUniformLocation | null;
     readonly portalCount: WebGLUniformLocation | null;
     readonly portals: WebGLUniformLocation | null;
@@ -195,6 +197,7 @@ interface PortalUniformLocations {
     readonly portal: WebGLUniformLocation | null;
     readonly rings: WebGLUniformLocation | null;
     readonly phaseOffset: WebGLUniformLocation | null;
+    readonly lightMode: WebGLUniformLocation | null;
 }
 
 interface LabelUniformLocations {
@@ -493,6 +496,14 @@ ${GLSL_PORTAL_RINGS_LIB}`
             * min(ringSum, 2.2)
             * ringVisibility
             * 0.92;
+
+        float lightPortalMix = clamp(floorGlow * 0.22, 0.0, 0.36);
+        float lightRingMix =
+            clamp(min(ringSum, 2.2) * ringVisibility * 0.42, 0.0, 0.58);
+        lightSurface = mix(lightSurface, portalLineGlow, lightPortalMix);
+        lightSurface = mix(lightSurface, portalRingColor, lightRingMix);
+        lightFeatureBoost =
+            max(lightFeatureBoost, max(lightPortalMix, lightRingMix));
     }
 `
         : "";
@@ -515,6 +526,15 @@ ${GLSL_PORTAL_RINGS_LIB}`
             * lightPool
             * 0.36
             * hoverBoost;
+        float lightPoolMix = clamp(
+            lightPool
+                * (0.12 + max(minorLine, majorLine) * 0.28)
+                * hoverBoost,
+            0.0,
+            0.48
+        );
+        lightSurface = mix(lightSurface, floorTint, lightPoolMix);
+        lightFeatureBoost = max(lightFeatureBoost, lightPoolMix);
     }
 `
         : "";
@@ -525,6 +545,7 @@ precision highp float;
 uniform vec2 u_resolution;
 uniform float u_device_pixel_ratio;
 uniform vec4 u_camera[5];
+uniform float u_light_mode;
 uniform float u_skybox_mix;
 ${portalDeclarations}${keypadDeclaration}
 out vec4 outColor;
@@ -577,6 +598,14 @@ void main() {
         + darkHorizonLift * horizonGlow
         - darkNearShade * nearFloorShadow;
 
+    vec3 lightFloorBase = vec3(0.835, 0.850, 0.878);
+    vec3 lightHorizonLift = vec3(0.020, 0.024, 0.030);
+    vec3 lightNearShade = vec3(0.016, 0.018, 0.022);
+    vec3 lightSurface = lightFloorBase
+        - vignette * 0.026
+        + lightHorizonLift * horizonGlow
+        - lightNearShade * nearFloorShadow;
+
     vec2 minorAxes = evaluateGridAxis(scrolledFloorXz, floorDerivative, 0.45);
     vec2 majorAxes = evaluateGridAxis(
         scrolledFloorXz * 0.25,
@@ -598,13 +627,42 @@ void main() {
         + 0.020 * cursorSpotlight;
     vec3 darkEmissive = vec3(darkGridLuminance);
 
+    float lightLineStrength = minorLine * 0.22 * minorVisibility
+        + majorLine * 0.46 * majorVisibility
+        + majorIntersection * 0.18 * majorVisibility
+        + max(minorLine, majorLine) * 0.26 * cursorSpotlight;
+    float lightLineOpacity = clamp(lightLineStrength, 0.0, 0.78);
+    vec3 lightSpotlightLift = vec3(0.065);
+    vec3 lightGridCharcoal = vec3(0.25);
+    lightSurface = clamp(
+        lightSurface + lightSpotlightLift * cursorSpotlight,
+        0.0,
+        1.0
+    );
+    lightSurface = mix(lightSurface, lightGridCharcoal, lightLineOpacity);
+    float lightFeatureBoost = lightLineOpacity;
+
 ${portalLightingBody}${keypadLightingBody}
     float skyFloorAlpha =
         floorMask * 0.92 * exp(-floorIntersectionDistance * 0.038);
     float darkAlpha = mix(1.0, skyFloorAlpha, u_skybox_mix);
     vec3 darkPremultiplied = darkSurface * darkAlpha + darkEmissive;
 
-    outColor = vec4(darkPremultiplied, darkAlpha);
+    float lightBaseAlpha =
+        floorMask * 0.86 * exp(-floorIntersectionDistance * 0.042);
+    float lightSkyAlpha = clamp(
+        lightBaseAlpha + lightFeatureBoost * (1.0 - lightBaseAlpha),
+        0.0,
+        1.0
+    );
+    float lightAlpha = mix(1.0, lightSkyAlpha, u_skybox_mix);
+    vec3 lightPremultiplied = clamp(lightSurface, 0.0, 1.0) * lightAlpha;
+
+    outColor = mix(
+        vec4(darkPremultiplied, darkAlpha),
+        vec4(lightPremultiplied, lightAlpha),
+        u_light_mode
+    );
 }
 `;
     return asGlslSource(sourceText);
@@ -971,6 +1029,7 @@ function createStageRenderer(
             "u_device_pixel_ratio"
         ),
         camera: glContext.getUniformLocation(gridProgram, "u_camera[0]"),
+        lightMode: glContext.getUniformLocation(gridProgram, "u_light_mode"),
         skyboxMix: glContext.getUniformLocation(gridProgram, "u_skybox_mix"),
         portalCount: glContext.getUniformLocation(
             gridProgram,
@@ -993,6 +1052,7 @@ function createStageRenderer(
     const asynchronousJobs: AsynchronousProgramJob[] = [];
 
     let isLightModeActive: boolean = initialLightMode;
+    let lightModeValue: LightModeUniform = initialLightMode ? 1 : 0;
     let skyboxProgram: WebGLProgram | null = null;
     let skyboxVertexArray: WebGLVertexArrayObject | null = null;
     let skyboxUniforms: SkyboxUniformLocations | null = null;
@@ -1016,6 +1076,7 @@ function createStageRenderer(
     let instanceBuffer: WebGLBuffer | null = null;
     let instanceCapacity: ElementCount = asElementCount(0);
     let particleResolutionLocation: WebGLUniformLocation | null = null;
+    let particleLightModeLocation: WebGLUniformLocation | null = null;
 
     let labelProgram: WebGLProgram | null = null;
     let labelVertexArray: WebGLVertexArrayObject | null = null;
@@ -1197,6 +1258,7 @@ function createStageRenderer(
         );
         glContext.uniform1f(portalUniforms.devicePixelRatio, devicePixelRatio);
         glContext.uniform4fv(portalUniforms.camera, cameraBuffer);
+        glContext.uniform1f(portalUniforms.lightMode, lightModeValue);
 
         for (
             let portalIndex: number = 0;
@@ -1259,7 +1321,7 @@ function createStageRenderer(
         ) {
             return;
         }
-        glContext.blendFunc(glContext.ONE, glContext.ONE);
+        glContext.blendFunc(glContext.ONE, glContext.ONE_MINUS_SRC_ALPHA);
         glContext.useProgram(particleProgram);
         glContext.bindVertexArray(particleVertexArray);
         glContext.uniform2f(
@@ -1267,6 +1329,7 @@ function createStageRenderer(
             viewportWidth,
             viewportHeight
         );
+        glContext.uniform1f(particleLightModeLocation, lightModeValue);
 
         glContext.bindBuffer(glContext.ARRAY_BUFFER, instanceBuffer);
         if (instanceCapacity < particleCount) {
@@ -1416,6 +1479,7 @@ function createStageRenderer(
         },
         setLightMode(nextLightMode: boolean): void {
             isLightModeActive = Boolean(nextLightMode);
+            lightModeValue = isLightModeActive ? 1 : 0;
             if (labelManager) {
                 labelManager.setLightMode(isLightModeActive);
             }
@@ -1592,6 +1656,10 @@ function createStageRenderer(
                             shaderProgram,
                             "u_phase_offset"
                         ),
+                        lightMode: glContext.getUniformLocation(
+                            shaderProgram,
+                            "u_light_mode"
+                        ),
                     };
                     portalUniforms = locations;
                     glContext.useProgram(shaderProgram);
@@ -1687,6 +1755,11 @@ function createStageRenderer(
                             glContext.getUniformLocation(
                                 shaderProgram,
                                 "u_resolution"
+                            );
+                        particleLightModeLocation =
+                            glContext.getUniformLocation(
+                                shaderProgram,
+                                "u_light_mode"
                             );
                     }
                 );
@@ -1822,6 +1895,7 @@ function createStageRenderer(
                 devicePixelRatio
             );
             glContext.uniform4fv(gridUniforms.camera, cameraBuffer);
+            glContext.uniform1f(gridUniforms.lightMode, lightModeValue);
             glContext.uniform1f(gridUniforms.skyboxMix, effectiveSkyboxMix);
             if (gridUniforms.portalCount !== null) {
                 glContext.uniform1i(

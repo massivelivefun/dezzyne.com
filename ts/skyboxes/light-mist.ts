@@ -8,7 +8,7 @@ import {
 const MIST_MAIN_BODY: GlslSnippet = asGlslSnippet(`
     float skyMask = smoothstep(-0.02, 0.12, elevation);
 
-    vec3 floorHorizon = vec3(0.1686, 0.173, 0.184);
+    vec3 floorHorizon = vec3(0.835, 0.850, 0.878);
     vec3 horizonSilver = vec3(0.735, 0.785, 0.855);
     vec3 midSilver = vec3(0.585, 0.648, 0.745);
     vec3 zenithSlate = vec3(0.435, 0.508, 0.635);

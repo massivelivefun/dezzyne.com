@@ -87,7 +87,12 @@ const PURE_WHITE_COLOR: CssColorValue = asCssColor("#ffffff");
 const FLAG_RING_STROKE: CssColorValue = asCssColor(
     "rgba(255, 255, 255, 0.85)"
 );
-const BADGE_DISC_FILL: CssColorValue = asCssColor("rgba(14, 18, 26, 0.54)");
+const DARK_BADGE_DISC_FILL: CssColorValue = asCssColor(
+    "rgba(14, 18, 26, 0.54)"
+);
+const LIGHT_BADGE_DISC_FILL: CssColorValue = asCssColor(
+    "rgba(14, 18, 26, 0.86)"
+);
 const WINDOWS_ACCENT_COLOR: CssColorValue = asCssColor("#00a8ff");
 const ANDROID_ACCENT_COLOR: CssColorValue = asCssColor("#2ed57a");
 const ANDROID_EYE_COLOR: CssColorValue = asCssColor("#121822");
@@ -117,6 +122,7 @@ uniform vec4 u_camera[5];
 uniform vec4 u_portal[3];
 uniform vec4 u_portal_rings[2];
 uniform float u_phase_offset;
+uniform float u_light_mode;
 
 out vec4 outColor;
 ${GLSL_CAMERA_RAY_LIB}${GLSL_NOISE_LIB}${GLSL_PORTAL_RINGS_LIB}
@@ -138,9 +144,10 @@ void main() {
     float auraStrength = auraIntensity * 0.52 * popAlpha;
     vec3 auraBlue = vec3(0.16, 0.54, 1.00);
     vec3 auraColor = auraBlue * auraStrength;
+    float auraAlpha = clamp(auraStrength * 1.05, 0.0, 0.72) * u_light_mode;
 
     if (normalizedRadius > 1.04) {
-        outColor = vec4(auraColor, 0.0);
+        outColor = vec4(auraColor, auraAlpha);
         return;
     }
 
@@ -243,8 +250,14 @@ void main() {
         + vortexColor * portalMask
         + rimColor * rimLine * 0.76 * popAlpha
         + ringGlow * foregroundRingMask * portalMask;
+    float fringeAlpha = clamp(
+        auraStrength * 1.05 + rimLine * 0.55 * popAlpha,
+        0.0,
+        0.76
+    ) * u_light_mode;
+    float compositeAlpha = portalMask + fringeAlpha * (1.0 - portalMask);
 
-    outColor = vec4(premultipliedColor, portalMask);
+    outColor = vec4(premultipliedColor, compositeAlpha);
 }
 `
 );
@@ -287,6 +300,8 @@ export const PARTICLE_FRAGMENT_SHADER_SOURCE: GlslSource = asGlslSource(
     `#version 300 es
 precision highp float;
 
+uniform float u_light_mode;
+
 in vec2 v_quad_uv;
 in float v_alpha;
 in float v_tint_code;
@@ -298,6 +313,7 @@ void main() {
     if (v_tint_code < 0.5 && radiusSquared > 1.0) {
         discard;
     }
+    float emissiveGain = mix(1.0, 0.90, u_light_mode);
     if (v_tint_code < 0.5) {
         float moteCore = exp(-radiusSquared * 6.8);
         float moteHalo = exp(-radiusSquared * 2.2) * (1.0 - radiusSquared);
@@ -309,7 +325,10 @@ void main() {
         vec3 moteCoreWhite = vec3(0.86, 0.96, 1.00);
         vec3 baseColor = mix(deepBlue, skyBlue, colorBlend);
         vec3 moteColor = baseColor + moteCoreWhite * moteCore * 0.50;
-        outColor = vec4(moteColor * moteGlow * v_alpha, 1.0);
+        vec3 moteRgb = moteColor * moteGlow * v_alpha * emissiveGain;
+        float moteAlpha =
+            clamp(moteGlow * v_alpha * 0.62, 0.0, 0.76) * u_light_mode;
+        outColor = vec4(moteRgb, moteAlpha);
         return;
     }
 
@@ -341,8 +360,10 @@ void main() {
     float gradientFactor = clamp((v_quad_uv.x + 0.55) / 1.20, 0.0, 1.0);
     vec3 streakColor = mix(tailPurple, headPink, gradientFactor);
     streakColor += streakHeadWhite * streakHead * 0.72;
-
-    outColor = vec4(streakColor * streakGlow * v_alpha, 1.0);
+    vec3 streakRgb = streakColor * streakGlow * v_alpha * emissiveGain;
+    float streakAlpha =
+        clamp(streakGlow * v_alpha * 0.58, 0.0, 0.76) * u_light_mode;
+    outColor = vec4(streakRgb, streakAlpha);
 }
 `
 );
@@ -501,10 +522,13 @@ function drawBadgeRing(
     centerX: CanvasDesignUnits,
     centerY: CanvasDesignUnits,
     badgeRadius: CanvasDesignUnits,
-    strokeColor: CssColorValue
+    strokeColor: CssColorValue,
+    isLightMode: boolean
 ): void {
     canvasContext.save();
-    canvasContext.fillStyle = BADGE_DISC_FILL;
+    canvasContext.fillStyle = isLightMode
+        ? LIGHT_BADGE_DISC_FILL
+        : DARK_BADGE_DISC_FILL;
     canvasContext.beginPath();
     canvasContext.arc(centerX, centerY, badgeRadius, 0, Math.PI * 2);
     canvasContext.fill();
@@ -541,14 +565,16 @@ function drawWindowsBadge(
     canvasContext: CanvasRenderingContext2D,
     centerX: CanvasDesignUnits,
     centerY: CanvasDesignUnits,
-    badgeRadius: CanvasDesignUnits
+    badgeRadius: CanvasDesignUnits,
+    isLightMode: boolean
 ): void {
     drawBadgeRing(
         canvasContext,
         centerX,
         centerY,
         badgeRadius,
-        WINDOWS_ACCENT_COLOR
+        WINDOWS_ACCENT_COLOR,
+        isLightMode
     );
 
     canvasContext.save();
@@ -605,14 +631,16 @@ function drawAndroidBadge(
     canvasContext: CanvasRenderingContext2D,
     centerX: CanvasDesignUnits,
     centerY: CanvasDesignUnits,
-    badgeRadius: CanvasDesignUnits
+    badgeRadius: CanvasDesignUnits,
+    isLightMode: boolean
 ): void {
     drawBadgeRing(
         canvasContext,
         centerX,
         centerY,
         badgeRadius,
-        ANDROID_ACCENT_COLOR
+        ANDROID_ACCENT_COLOR,
+        isLightMode
     );
 
     canvasContext.save();
@@ -645,14 +673,16 @@ function drawAppleBadge(
     canvasContext: CanvasRenderingContext2D,
     centerX: CanvasDesignUnits,
     centerY: CanvasDesignUnits,
-    badgeRadius: CanvasDesignUnits
+    badgeRadius: CanvasDesignUnits,
+    isLightMode: boolean
 ): void {
     drawBadgeRing(
         canvasContext,
         centerX,
         centerY,
         badgeRadius,
-        APPLE_ACCENT_COLOR
+        APPLE_ACCENT_COLOR,
+        isLightMode
     );
 
     canvasContext.save();
@@ -734,19 +764,22 @@ function buildStaticChromeCanvas(
         canvasContext,
         firstPlatformX,
         platformCenterY,
-        platformRadius
+        platformRadius,
+        isLightMode
     );
     drawAndroidBadge(
         canvasContext,
         secondPlatformX,
         platformCenterY,
-        platformRadius
+        platformRadius,
+        isLightMode
     );
     drawAppleBadge(
         canvasContext,
         thirdPlatformX,
         platformCenterY,
-        platformRadius
+        platformRadius,
+        isLightMode
     );
     return templateCanvas;
 }
