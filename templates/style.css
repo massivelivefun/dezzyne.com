@@ -6,6 +6,22 @@
   src: url("/fonts/inter-latin-wght-normal.woff2") format("woff2");
 }
 
+@font-face {
+  font-family: "DezzyneTitle";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    local("Helvetica Neue Bold"),
+    local("HelveticaNeue-Bold"),
+    local("Arial Bold"),
+    local("Arial-BoldMT"),
+    url("/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  ascent-override: 72%;
+  descent-override: 28%;
+  line-gap-override: 0%;
+}
+
 :root {
   color-scheme: dark;
   overscroll-behavior: none;
@@ -23,7 +39,7 @@ body {
   display: flex;
   flex-direction: column;
   margin: 0;
-  font-family: "Helvetica Neue", Helvetica, "Inter", sans-serif;
+  font-family: "Helvetica Neue", Helvetica, Arial, "Inter", sans-serif;
   background-color: #000000;
   color: #f0f0f0;
   overscroll-behavior: none;
@@ -84,16 +100,12 @@ a {
   font-size: 1.5rem;
   font-weight: 700;
   line-height: 1;
-  text-box-trim: trim-both;
-  text-box-edge: cap alphabetic;
 }
 
 .header-nav a,
 .footer-copy {
   display: block;
   line-height: 1;
-  text-box-trim: trim-both;
-  text-box-edge: cap alphabetic;
 }
 
 .site-stage {
@@ -205,14 +217,16 @@ a {
     right: clamp(1.5rem, 4vw, 4.5rem);
     bottom: 0;
     margin: 0;
+    font-family:
+      "DezzyneTitle", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: clamp(7.5rem, 16.5vw, 13.125rem);
-    font-weight: 800;
-    line-height: 1;
+    font-weight: 700;
+    line-height: normal;
     letter-spacing: -0.03em;
     color: rgba(255, 255, 255, 0.09);
     white-space: nowrap;
     text-align: right;
-    transform: translateY(15%);
+    transform: translateY(34%);
     pointer-events: none;
     user-select: none;
     z-index: 1;
@@ -223,12 +237,20 @@ a {
   }
 }
 
-@supports (text-box-trim: trim-both) {
+@supports (hanging-punctuation: first) {
   @media (min-width: 769px) {
     .page-title {
       text-box-trim: trim-both;
       text-box-edge: cap alphabetic;
-      transform: translateY(2%);
+      transform: translateY(6%);
+    }
+  }
+
+  @media (max-height: 500px) and (orientation: landscape) {
+    .site-stage .page-title {
+      text-box-trim: trim-both;
+      text-box-edge: cap alphabetic;
+      transform: translateY(6%);
     }
   }
 }
@@ -276,6 +298,11 @@ a {
   fill: #5865f2;
 }
 
+.social-link--patreon:hover svg,
+.social-link--patreon:focus-visible svg {
+  fill: #ff7a29;
+}
+
 .social-link--unity:hover svg,
 .social-link--unity:focus-visible svg {
   fill: #ffffff;
@@ -301,8 +328,6 @@ a {
   line-height: 1.15;
   letter-spacing: -0.025em;
   text-wrap: balance;
-  text-box-trim: trim-both;
-  text-box-edge: cap alphabetic;
 }
 
 .about-copy {
@@ -330,8 +355,6 @@ a {
   line-height: 1.15;
   letter-spacing: -0.015em;
   white-space: nowrap;
-  text-box-trim: trim-both;
-  text-box-edge: cap alphabetic;
 }
 
 .accent-link--games {
@@ -348,6 +371,10 @@ a {
 
 .accent-link--storefront {
   color: #b57cff;
+}
+
+.accent-link--patreon {
+  color: #ff8533;
 }
 
 .accent-link:hover,
@@ -381,6 +408,7 @@ a {
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: end;
   gap: 1.25rem;
 }
 
@@ -390,10 +418,26 @@ a {
   gap: 0.45rem;
 }
 
+.form-field-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 .form-field label {
   font-size: 0.9rem;
   font-weight: 500;
   color: #f0f0f0;
+}
+
+.form-error {
+  margin-left: auto;
+  color: #f05d5e;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: right;
 }
 
 .form-field input,
@@ -414,6 +458,17 @@ a {
   outline: none;
   border-color: #e7e9ea;
   background-color: #3d3d3d;
+}
+
+.form-field input[aria-invalid="true"],
+.form-field textarea[aria-invalid="true"] {
+  border-color: #f05d5e;
+}
+
+.form-field input[readonly],
+.form-field textarea[readonly] {
+  opacity: 0.72;
+  cursor: default;
 }
 
 .form-field textarea {
@@ -446,6 +501,34 @@ a {
   outline: none;
   border-color: #e7e9ea;
   background-color: #3d3d3d;
+}
+
+.btn-submit:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.btn-submit[hidden],
+.form-status[hidden] {
+  display: none;
+}
+
+.form-status {
+  margin: 0;
+  min-height: 2.45rem;
+  display: flex;
+  align-items: center;
+  color: #f0f0f0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.form-status--error {
+  margin-top: 0.5rem;
+  min-height: 0;
+  color: #f05d5e;
+  font-size: 0.85rem;
 }
 
 @media (min-width: 769px) and (max-height: 820px) {
@@ -539,7 +622,7 @@ a {
   }
 
   .social-links {
-    gap: 0.85rem;
+    gap: clamp(0.55rem, 2.2vw, 0.85rem);
     flex-shrink: 0;
   }
 
@@ -575,8 +658,16 @@ a {
     gap: 0.25rem;
   }
 
+  .form-field-header {
+    gap: 0.35rem;
+  }
+
   .form-field label {
     font-size: 0.85rem;
+  }
+
+  .form-error {
+    font-size: 0.75rem;
   }
 
   .form-field input,
@@ -596,6 +687,12 @@ a {
   .btn-submit {
     width: 100%;
     padding: 0.6rem 1.4rem;
+  }
+
+  .form-status {
+    min-height: 2.15rem;
+    font-size: 0.88rem;
+    line-height: 1.38;
   }
 }
 
@@ -668,16 +765,16 @@ a {
     right: clamp(1rem, 3vw, 2.5rem);
     bottom: 0;
     margin: 0;
+    font-family:
+      "DezzyneTitle", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: clamp(3.25rem, 22vh, 5.5rem);
-    font-weight: 800;
-    line-height: 1;
+    font-weight: 700;
+    line-height: normal;
     letter-spacing: -0.03em;
     color: rgba(255, 255, 255, 0.09);
     white-space: nowrap;
     text-align: right;
-    text-box-trim: trim-both;
-    text-box-edge: cap alphabetic;
-    transform: translateY(2%);
+    transform: translateY(34%);
     pointer-events: none;
     z-index: 1;
   }
@@ -726,8 +823,14 @@ a {
   .about-copy,
   .contact-intro,
   .form-field label,
+  .form-status,
   .not-found h2 {
     color: #000000;
+  }
+
+  .form-error,
+  .form-status--error {
+    color: #e6192e;
   }
 
   .accent-link--games {
@@ -744,6 +847,10 @@ a {
 
   .accent-link--storefront {
     color: #6b21e8;
+  }
+
+  .accent-link--patreon {
+    color: #e05600;
   }
 
   .accent-link:hover,
@@ -766,6 +873,11 @@ a {
   .btn-submit:focus-visible {
     border-color: #000000;
     background-color: #ffffff;
+  }
+
+  .form-field input[aria-invalid="true"],
+  .form-field textarea[aria-invalid="true"] {
+    border-color: #e6192e;
   }
 }
 

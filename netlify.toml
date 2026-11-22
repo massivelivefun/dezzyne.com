@@ -31,7 +31,7 @@
     Content-Security-Policy = """\
       default-src 'none'; \
       script-src 'self' 'wasm-unsafe-eval'; \
-      style-src 'sha256-5siM63aQAkn2BPjtJFD27l73CboI133HQpli4DvRvhU='; \
+      style-src 'sha256-Ho62mQu68yTGxfwAK2nuXtWON4Nh1ESY+aaJisKmZx8='; \
       img-src 'self'; \
       font-src 'self'; \
       connect-src 'self'; \
@@ -44,22 +44,41 @@
       """
 
 [[headers]]
+  for = "/404/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, noarchive, nosnippet"
+
+[[headers]]
+  for = "/*/404/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, noarchive, nosnippet"
+
+[[headers]]
+  for = "/llms.txt"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
   for = "/wasm/*.wasm"
   [headers.values]
     Content-Type = "application/wasm"
     X-Content-Type-Options = "nosniff"
+    X-Robots-Tag = "noindex, noarchive, nosnippet"
 
 [[headers]]
   for = "/wasm/*.js"
   [headers.values]
     Content-Type = "text/javascript; charset=utf-8"
     X-Content-Type-Options = "nosniff"
+    X-Robots-Tag = "noindex, noarchive, nosnippet"
 
 [[headers]]
   for = "/wasm/skyboxes/*.js"
   [headers.values]
     Content-Type = "text/javascript; charset=utf-8"
     X-Content-Type-Options = "nosniff"
+    X-Robots-Tag = "noindex, noarchive, nosnippet"
 
 [[headers]]
   for = "/fonts/*.woff2"
