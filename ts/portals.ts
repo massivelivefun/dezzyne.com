@@ -68,7 +68,7 @@ const LABEL_TEXTURE_HEIGHT: DevicePixels = asDevicePixels(298);
 const LABEL_RENDER_SCALE: number = LABEL_TEXTURE_WIDTH / DESIGN_WIDTH;
 const LABEL_ASPECT_RATIO: number = DESIGN_WIDTH / DESIGN_HEIGHT;
 const LABEL_FONT_FAMILY: string =
-    '"Helvetica Neue", Helvetica, "Inter", sans-serif';
+    '"Helvetica Neue", Helvetica, Arial, "Inter", sans-serif';
 
 const LABEL_TEXT_COLOR: CssColorValue = asCssColor("#f5f7fa");
 const LABEL_RIM_SHADOW_COLOR: CssColorValue = asCssColor(
