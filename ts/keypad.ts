@@ -42,7 +42,6 @@ uniform float u_device_pixel_ratio;
 uniform int u_zero;
 uniform vec4 u_camera[5];
 uniform vec4 u_keypad[4];
-uniform float u_light_mode;
 
 out vec4 outColor;
 ${GLSL_CAMERA_RAY_LIB}${GLSL_NOISE_LIB}
@@ -429,11 +428,7 @@ void main() {
         float haloFalloff = exp(-max(0.0, closestBezelDistance) * 0.28)
             * (0.36 + hoverIntensity * 0.14);
         float haloStrength = haloFalloff * keypadVisibility;
-        float lightHaloAlpha = clamp(haloStrength * 0.85, 0.0, 1.0);
-        vec3 darkHaloRgb = haloColor * haloStrength;
-        vec3 lightHaloRgb = haloColor * 0.82 * lightHaloAlpha;
-        vec3 finalHaloRgb = mix(darkHaloRgb, lightHaloRgb, u_light_mode);
-        outColor = vec4(finalHaloRgb, lightHaloAlpha * u_light_mode);
+        outColor = vec4(haloColor * haloStrength, 0.0);
         return;
     }
 

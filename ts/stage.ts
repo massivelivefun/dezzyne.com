@@ -40,7 +40,6 @@ import {
     type ElementCount,
     type GlslSource,
     type KeypadUniformBuffer,
-    type LightModeUniform,
     type LightSkyboxId,
     type Milliseconds,
     type ParticlesInstanceBuffer,
@@ -163,7 +162,6 @@ interface GridUniformLocations {
     readonly resolution: WebGLUniformLocation | null;
     readonly devicePixelRatio: WebGLUniformLocation | null;
     readonly camera: WebGLUniformLocation | null;
-    readonly lightMode: WebGLUniformLocation | null;
     readonly skyboxMix: WebGLUniformLocation | null;
     readonly portalCount: WebGLUniformLocation | null;
     readonly portals: WebGLUniformLocation | null;
@@ -186,7 +184,6 @@ interface KeypadUniformLocations {
     readonly boundsRect: WebGLUniformLocation | null;
     readonly camera: WebGLUniformLocation | null;
     readonly keypad: WebGLUniformLocation | null;
-    readonly lightMode: WebGLUniformLocation | null;
 }
 
 interface PortalUniformLocations {
@@ -198,7 +195,6 @@ interface PortalUniformLocations {
     readonly portal: WebGLUniformLocation | null;
     readonly rings: WebGLUniformLocation | null;
     readonly phaseOffset: WebGLUniformLocation | null;
-    readonly lightMode: WebGLUniformLocation | null;
 }
 
 interface LabelUniformLocations {
@@ -461,7 +457,6 @@ ${GLSL_PORTAL_RINGS_LIB}`
     vec3 portalFloorAmbient = vec3(0.04, 0.13, 0.28);
     vec3 portalLineGlow = vec3(0.16, 0.54, 1.00);
     vec3 portalRingColor = vec3(0.18, 0.60, 1.00);
-    vec3 lightPortalCobalt = vec3(0.08, 0.44, 0.94);
     for (int portalIndex = 0; portalIndex < u_portal_count; portalIndex++) {
         vec4 portalWorld = u_portals[portalIndex * 3 + 1];
         vec4 portalState = u_portals[portalIndex * 3 + 2];
@@ -498,18 +493,6 @@ ${GLSL_PORTAL_RINGS_LIB}`
             * min(ringSum, 2.2)
             * ringVisibility
             * 0.92;
-
-        float lightRingMix =
-            clamp(min(ringSum, 2.2) * ringVisibility * 0.52, 0.0, 0.82);
-        float lightPortalMix = clamp(
-            floorGlow * (0.20 + max(minorLine, majorLine) * 0.38),
-            0.0,
-            0.68
-        );
-        float combinedPortalMix = max(lightRingMix, lightPortalMix);
-        lightSurface =
-            mix(lightSurface, lightPortalCobalt, combinedPortalMix);
-        lightFeatureAlpha = max(lightFeatureAlpha, combinedPortalMix);
     }
 `
         : "";
@@ -532,16 +515,6 @@ ${GLSL_PORTAL_RINGS_LIB}`
             * lightPool
             * 0.36
             * hoverBoost;
-        float lightPoolMix = clamp(
-            lightPool
-                * (0.14 + max(minorLine, majorLine) * 0.40)
-                * hoverBoost,
-            0.0,
-            0.72
-        );
-        vec3 lightKeypadTint = floorTint * 0.78;
-        lightSurface = mix(lightSurface, lightKeypadTint, lightPoolMix);
-        lightFeatureAlpha = max(lightFeatureAlpha, lightPoolMix);
     }
 `
         : "";
@@ -552,7 +525,6 @@ precision highp float;
 uniform vec2 u_resolution;
 uniform float u_device_pixel_ratio;
 uniform vec4 u_camera[5];
-uniform float u_light_mode;
 uniform float u_skybox_mix;
 ${portalDeclarations}${keypadDeclaration}
 out vec4 outColor;
@@ -605,14 +577,6 @@ void main() {
         + darkHorizonLift * horizonGlow
         - darkNearShade * nearFloorShadow;
 
-    vec3 lightFloorBase = vec3(0.902, 0.918, 0.941);
-    vec3 lightHorizonLift = vec3(0.024, 0.026, 0.030);
-    vec3 lightNearShade = vec3(0.014, 0.016, 0.020);
-    vec3 lightSurface = lightFloorBase
-        - vignette * 0.024
-        + lightHorizonLift * horizonGlow
-        - lightNearShade * nearFloorShadow;
-
     vec2 minorAxes = evaluateGridAxis(scrolledFloorXz, floorDerivative, 0.45);
     vec2 majorAxes = evaluateGridAxis(
         scrolledFloorXz * 0.25,
@@ -634,46 +598,13 @@ void main() {
         + 0.020 * cursorSpotlight;
     vec3 darkEmissive = vec3(darkGridLuminance);
 
-    float lightGridInk = minorLine * 0.22 * minorVisibility
-        + majorLine * 0.44 * majorVisibility
-        + majorIntersection * 0.18 * majorVisibility
-        + max(minorLine, majorLine) * 0.34 * cursorSpotlight;
-    float clampedLightInk = clamp(lightGridInk, 0.0, 0.72);
-    vec3 slateGridInk = vec3(0.42, 0.48, 0.58);
-    vec3 cursorGridCobalt = vec3(0.12, 0.36, 0.72);
-    vec3 lightCursorSheen = vec3(0.028, 0.032, 0.038);
-    vec3 lightInkColor = mix(
-        slateGridInk,
-        cursorGridCobalt,
-        clamp(cursorSpotlight * 1.25, 0.0, 1.0)
-    );
-    lightSurface += lightCursorSheen * cursorSpotlight;
-    lightSurface = mix(lightSurface, lightInkColor, clampedLightInk);
-    float lightFeatureAlpha = clamp(
-        clampedLightInk * 0.88 + cursorSpotlight * 0.35,
-        0.0,
-        1.0
-    );
-
 ${portalLightingBody}${keypadLightingBody}
     float skyFloorAlpha =
         floorMask * 0.92 * exp(-floorIntersectionDistance * 0.038);
     float darkAlpha = mix(1.0, skyFloorAlpha, u_skybox_mix);
     vec3 darkPremultiplied = darkSurface * darkAlpha + darkEmissive;
 
-    float lightSkyAlpha = clamp(
-        skyFloorAlpha + lightFeatureAlpha * (1.0 - skyFloorAlpha),
-        0.0,
-        1.0
-    );
-    float lightAlpha = mix(1.0, lightSkyAlpha, u_skybox_mix);
-    vec3 lightPremultiplied = clamp(lightSurface, 0.0, 1.0) * lightAlpha;
-
-    outColor = mix(
-        vec4(darkPremultiplied, darkAlpha),
-        vec4(lightPremultiplied, lightAlpha),
-        u_light_mode
-    );
+    outColor = vec4(darkPremultiplied, darkAlpha);
 }
 `;
     return asGlslSource(sourceText);
@@ -1040,7 +971,6 @@ function createStageRenderer(
             "u_device_pixel_ratio"
         ),
         camera: glContext.getUniformLocation(gridProgram, "u_camera[0]"),
-        lightMode: glContext.getUniformLocation(gridProgram, "u_light_mode"),
         skyboxMix: glContext.getUniformLocation(gridProgram, "u_skybox_mix"),
         portalCount: glContext.getUniformLocation(
             gridProgram,
@@ -1062,7 +992,7 @@ function createStageRenderer(
     ) as PortalRingsBuffer;
     const asynchronousJobs: AsynchronousProgramJob[] = [];
 
-    let lightModeValue: LightModeUniform = initialLightMode ? 1 : 0;
+    let isLightModeActive: boolean = initialLightMode;
     let skyboxProgram: WebGLProgram | null = null;
     let skyboxVertexArray: WebGLVertexArrayObject | null = null;
     let skyboxUniforms: SkyboxUniformLocations | null = null;
@@ -1086,7 +1016,6 @@ function createStageRenderer(
     let instanceBuffer: WebGLBuffer | null = null;
     let instanceCapacity: ElementCount = asElementCount(0);
     let particleResolutionLocation: WebGLUniformLocation | null = null;
-    let particleLightModeLocation: WebGLUniformLocation | null = null;
 
     let labelProgram: WebGLProgram | null = null;
     let labelVertexArray: WebGLVertexArrayObject | null = null;
@@ -1242,7 +1171,6 @@ function createStageRenderer(
         );
         glContext.uniform4fv(keypadUniforms.camera, cameraBuffer);
         glContext.uniform4fv(keypadUniforms.keypad, keypadBuffer);
-        glContext.uniform1f(keypadUniforms.lightMode, lightModeValue);
 
         glContext.drawArrays(glContext.TRIANGLES, 0, 6);
         glContext.disable(glContext.BLEND);
@@ -1269,7 +1197,6 @@ function createStageRenderer(
         );
         glContext.uniform1f(portalUniforms.devicePixelRatio, devicePixelRatio);
         glContext.uniform4fv(portalUniforms.camera, cameraBuffer);
-        glContext.uniform1f(portalUniforms.lightMode, lightModeValue);
 
         for (
             let portalIndex: number = 0;
@@ -1332,7 +1259,7 @@ function createStageRenderer(
         ) {
             return;
         }
-        glContext.blendFunc(glContext.ONE, glContext.ONE_MINUS_SRC_ALPHA);
+        glContext.blendFunc(glContext.ONE, glContext.ONE);
         glContext.useProgram(particleProgram);
         glContext.bindVertexArray(particleVertexArray);
         glContext.uniform2f(
@@ -1340,7 +1267,6 @@ function createStageRenderer(
             viewportWidth,
             viewportHeight
         );
-        glContext.uniform1f(particleLightModeLocation, lightModeValue);
 
         glContext.bindBuffer(glContext.ARRAY_BUFFER, instanceBuffer);
         if (instanceCapacity < particleCount) {
@@ -1489,9 +1415,9 @@ function createStageRenderer(
             return true;
         },
         setLightMode(nextLightMode: boolean): void {
-            lightModeValue = nextLightMode ? 1 : 0;
+            isLightModeActive = Boolean(nextLightMode);
             if (labelManager) {
-                labelManager.setLightMode(nextLightMode);
+                labelManager.setLightMode(isLightModeActive);
             }
         },
         setSkyboxAllowed(allowed: boolean): void {
@@ -1611,10 +1537,6 @@ function createStageRenderer(
                             shaderProgram,
                             "u_keypad[0]"
                         ),
-                        lightMode: glContext.getUniformLocation(
-                            shaderProgram,
-                            "u_light_mode"
-                        ),
                     };
                     keypadUniforms = locations;
                     glContext.useProgram(shaderProgram);
@@ -1669,10 +1591,6 @@ function createStageRenderer(
                         phaseOffset: glContext.getUniformLocation(
                             shaderProgram,
                             "u_phase_offset"
-                        ),
-                        lightMode: glContext.getUniformLocation(
-                            shaderProgram,
-                            "u_light_mode"
                         ),
                     };
                     portalUniforms = locations;
@@ -1770,11 +1688,6 @@ function createStageRenderer(
                                 shaderProgram,
                                 "u_resolution"
                             );
-                        particleLightModeLocation =
-                            glContext.getUniformLocation(
-                                shaderProgram,
-                                "u_light_mode"
-                            );
                     }
                 );
             asynchronousJobs.push(particleJob);
@@ -1790,7 +1703,7 @@ function createStageRenderer(
                     const manager: LabelManager | null =
                         portalsModule.createLabelManager(
                             glContext,
-                            lightModeValue === 1
+                            isLightModeActive
                         );
                     if (!vertexArray || !manager) {
                         return;
@@ -1909,7 +1822,6 @@ function createStageRenderer(
                 devicePixelRatio
             );
             glContext.uniform4fv(gridUniforms.camera, cameraBuffer);
-            glContext.uniform1f(gridUniforms.lightMode, lightModeValue);
             glContext.uniform1f(gridUniforms.skyboxMix, effectiveSkyboxMix);
             if (gridUniforms.portalCount !== null) {
                 glContext.uniform1i(

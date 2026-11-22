@@ -70,8 +70,16 @@ const LABEL_ASPECT_RATIO: number = DESIGN_WIDTH / DESIGN_HEIGHT;
 const LABEL_FONT_FAMILY: string =
     '"Helvetica Neue", Helvetica, "Inter", sans-serif';
 
-const DARK_LABEL_TEXT_COLOR: CssColorValue = asCssColor("#f5f7fa");
-const LIGHT_LABEL_TEXT_COLOR: CssColorValue = asCssColor("#111318");
+const LABEL_TEXT_COLOR: CssColorValue = asCssColor("#f5f7fa");
+const LABEL_RIM_SHADOW_COLOR: CssColorValue = asCssColor(
+    "rgba(0, 0, 0, 0.85)"
+);
+const LABEL_DROP_SHADOW_COLOR: CssColorValue = asCssColor(
+    "rgba(0, 0, 0, 0.45)"
+);
+const SHADOW_BACKING_FILL: CssColorValue = asCssColor("#000000");
+const OFFSCREEN_DESIGN_SHIFT: number = DESIGN_WIDTH * 2;
+const OFFSCREEN_PIXEL_SHIFT: number = LABEL_TEXTURE_WIDTH * 2;
 const FLAG_CRIMSON_COLOR: CssColorValue = asCssColor("#d92b3a");
 const FLAG_WHITE_COLOR: CssColorValue = asCssColor("#f4f6f9");
 const FLAG_CANTON_COLOR: CssColorValue = asCssColor("#1c4ca8");
@@ -109,7 +117,6 @@ uniform vec4 u_camera[5];
 uniform vec4 u_portal[3];
 uniform vec4 u_portal_rings[2];
 uniform float u_phase_offset;
-uniform float u_light_mode;
 
 out vec4 outColor;
 ${GLSL_CAMERA_RAY_LIB}${GLSL_NOISE_LIB}${GLSL_PORTAL_RINGS_LIB}
@@ -129,14 +136,11 @@ void main() {
     float auraFade = smoothstep(1.36, 1.0, normalizedRadius);
     float auraIntensity = exp(-auraDistance * 8.5) * auraFade;
     float auraStrength = auraIntensity * 0.52 * popAlpha;
-    vec3 darkAuraBlue = vec3(0.16, 0.54, 1.00);
-    vec3 lightAuraCobalt = vec3(0.08, 0.42, 0.92);
-    vec3 auraTint = mix(darkAuraBlue, lightAuraCobalt, u_light_mode);
-    vec3 auraColor = auraTint * auraStrength;
-    float auraAlpha = clamp(auraStrength, 0.0, 1.0) * u_light_mode;
+    vec3 auraBlue = vec3(0.16, 0.54, 1.00);
+    vec3 auraColor = auraBlue * auraStrength;
 
     if (normalizedRadius > 1.04) {
-        outColor = vec4(auraColor, auraAlpha);
+        outColor = vec4(auraColor, 0.0);
         return;
     }
 
@@ -239,9 +243,8 @@ void main() {
         + vortexColor * portalMask
         + rimColor * rimLine * 0.76 * popAlpha
         + ringGlow * foregroundRingMask * portalMask;
-    float compositeAlpha = portalMask + auraAlpha * (1.0 - portalMask);
 
-    outColor = vec4(premultipliedColor, compositeAlpha);
+    outColor = vec4(premultipliedColor, portalMask);
 }
 `
 );
@@ -284,8 +287,6 @@ export const PARTICLE_FRAGMENT_SHADER_SOURCE: GlslSource = asGlslSource(
     `#version 300 es
 precision highp float;
 
-uniform float u_light_mode;
-
 in vec2 v_quad_uv;
 in float v_alpha;
 in float v_tint_code;
@@ -308,17 +309,7 @@ void main() {
         vec3 moteCoreWhite = vec3(0.86, 0.96, 1.00);
         vec3 baseColor = mix(deepBlue, skyBlue, colorBlend);
         vec3 moteColor = baseColor + moteCoreWhite * moteCore * 0.50;
-        vec3 darkMote = moteColor * moteGlow * v_alpha;
-
-        vec3 lightSapphire = vec3(0.04, 0.36, 0.92);
-        vec3 lightCerulean = vec3(0.08, 0.54, 0.98);
-        vec3 lightCoreHighlight = vec3(0.30, 0.44, 0.55);
-        vec3 lightBase = mix(lightSapphire, lightCerulean, colorBlend);
-        vec3 lightCore = lightCoreHighlight * moteCore * 0.4;
-        vec3 lightTint = clamp(lightBase + lightCore, 0.0, 1.0);
-        float moteOpacity = clamp(moteGlow * v_alpha * 1.15, 0.0, 1.0);
-        vec3 finalMote = mix(darkMote, lightTint * moteOpacity, u_light_mode);
-        outColor = vec4(finalMote, moteOpacity * u_light_mode);
+        outColor = vec4(moteColor * moteGlow * v_alpha, 1.0);
         return;
     }
 
@@ -350,25 +341,8 @@ void main() {
     float gradientFactor = clamp((v_quad_uv.x + 0.55) / 1.20, 0.0, 1.0);
     vec3 streakColor = mix(tailPurple, headPink, gradientFactor);
     streakColor += streakHeadWhite * streakHead * 0.72;
-    vec3 darkStreak = streakColor * streakGlow * v_alpha;
 
-    vec3 lightTailIndigo = vec3(0.42, 0.10, 0.86);
-    vec3 lightHeadMagenta = vec3(0.84, 0.16, 0.66);
-    vec3 lightHeadBloom = vec3(0.32, 0.20, 0.34);
-    vec3 lightStreakBase = mix(
-        lightTailIndigo,
-        lightHeadMagenta,
-        gradientFactor
-    );
-    vec3 lightStreakTint = clamp(
-        lightStreakBase + lightHeadBloom * streakHead * 0.45,
-        0.0,
-        1.0
-    );
-    float streakOpacity = clamp(streakGlow * v_alpha * 1.15, 0.0, 1.0);
-    vec3 finalStreak =
-        mix(darkStreak, lightStreakTint * streakOpacity, u_light_mode);
-    outColor = vec4(finalStreak, streakOpacity * u_light_mode);
+    outColor = vec4(streakColor * streakGlow * v_alpha, 1.0);
 }
 `
 );
@@ -391,12 +365,80 @@ void main() {
 `
 );
 
+function fillLabelTextWithShadow(
+    canvasContext: CanvasRenderingContext2D,
+    textValue: string,
+    designX: number,
+    designY: number,
+    isLightMode: boolean
+): void {
+    if (!isLightMode) {
+        canvasContext.fillText(textValue, designX, designY);
+        return;
+    }
+    canvasContext.save();
+    canvasContext.shadowColor = LABEL_DROP_SHADOW_COLOR;
+    canvasContext.shadowBlur = 2.0;
+    canvasContext.shadowOffsetX = OFFSCREEN_PIXEL_SHIFT;
+    canvasContext.shadowOffsetY = 2.0;
+    canvasContext.fillText(
+        textValue,
+        designX - OFFSCREEN_DESIGN_SHIFT,
+        designY
+    );
+
+    canvasContext.shadowColor = LABEL_RIM_SHADOW_COLOR;
+    canvasContext.shadowBlur = 2.0;
+    canvasContext.shadowOffsetX = 0.0;
+    canvasContext.shadowOffsetY = 0.0;
+    canvasContext.fillText(textValue, designX, designY);
+    canvasContext.restore();
+}
+
+function drawRegionBadgeShadow(
+    canvasContext: CanvasRenderingContext2D,
+    centerX: CanvasDesignUnits,
+    centerY: CanvasDesignUnits,
+    badgeRadius: CanvasDesignUnits,
+    isLightMode: boolean
+): void {
+    if (!isLightMode) {
+        return;
+    }
+    canvasContext.save();
+    canvasContext.fillStyle = SHADOW_BACKING_FILL;
+    canvasContext.shadowColor = LABEL_DROP_SHADOW_COLOR;
+    canvasContext.shadowBlur = 2.0;
+    canvasContext.shadowOffsetX = 0.0;
+    canvasContext.shadowOffsetY = 2.0;
+    canvasContext.beginPath();
+    canvasContext.arc(centerX, centerY, badgeRadius, 0, Math.PI * 2);
+    canvasContext.fill();
+
+    canvasContext.shadowColor = LABEL_RIM_SHADOW_COLOR;
+    canvasContext.shadowBlur = 2.0;
+    canvasContext.shadowOffsetX = 0.0;
+    canvasContext.shadowOffsetY = 0.0;
+    canvasContext.beginPath();
+    canvasContext.arc(centerX, centerY, badgeRadius, 0, Math.PI * 2);
+    canvasContext.fill();
+    canvasContext.restore();
+}
+
 function drawUnitedStatesBadge(
     canvasContext: CanvasRenderingContext2D,
     centerX: CanvasDesignUnits,
     centerY: CanvasDesignUnits,
-    badgeRadius: CanvasDesignUnits
+    badgeRadius: CanvasDesignUnits,
+    isLightMode: boolean
 ): void {
+    drawRegionBadgeShadow(
+        canvasContext,
+        centerX,
+        centerY,
+        badgeRadius,
+        isLightMode
+    );
     canvasContext.save();
     canvasContext.beginPath();
     canvasContext.arc(centerX, centerY, badgeRadius, 0, Math.PI * 2);
@@ -655,18 +697,27 @@ function buildStaticChromeCanvas(
 
     canvasContext.scale(LABEL_RENDER_SCALE, LABEL_RENDER_SCALE);
     const centerX: CanvasDesignUnits = asDesignUnits(DESIGN_WIDTH * 0.5);
-    const labelColor: CssColorValue = isLightMode
-        ? LIGHT_LABEL_TEXT_COLOR
-        : DARK_LABEL_TEXT_COLOR;
     canvasContext.textAlign = "center";
     canvasContext.textBaseline = "alphabetic";
-    canvasContext.fillStyle = labelColor;
+    canvasContext.fillStyle = LABEL_TEXT_COLOR;
 
     canvasContext.font = TITLE_FONT_SPEC;
-    canvasContext.fillText("Coming Soon", centerX, 58);
+    fillLabelTextWithShadow(
+        canvasContext,
+        "Coming Soon",
+        centerX,
+        58,
+        isLightMode
+    );
 
     canvasContext.font = SUBTITLE_FONT_SPEC;
-    canvasContext.fillText("Dezzyne", centerX, 114);
+    fillLabelTextWithShadow(
+        canvasContext,
+        "Dezzyne",
+        centerX,
+        114,
+        isLightMode
+    );
 
     const platformCenterY: CanvasDesignUnits = asDesignUnits(371);
     const platformRadius: CanvasDesignUnits = asDesignUnits(35);
@@ -738,29 +789,41 @@ function paintDynamicLabel(
         canvasContext,
         badgeCenterX,
         badgeCenterY,
-        badgeRadius
+        badgeRadius,
+        isLightMode
     );
 
-    const textColor: CssColorValue = isLightMode
-        ? LIGHT_LABEL_TEXT_COLOR
-        : DARK_LABEL_TEXT_COLOR;
     canvasContext.textAlign = "left";
     canvasContext.textBaseline = "alphabetic";
-    canvasContext.fillStyle = textColor;
-    canvasContext.fillText(
+    canvasContext.fillStyle = LABEL_TEXT_COLOR;
+    fillLabelTextWithShadow(
+        canvasContext,
         regionText,
         rowStartX + badgeRadius * 2 + badgeGap,
-        170
+        170,
+        isLightMode
     );
 
     const occupancyText: string = `${String(playerCount)} / 80`;
     canvasContext.textAlign = "center";
     canvasContext.font = METADATA_FONT_SPEC;
-    canvasContext.fillText(occupancyText, centerX, 226);
+    fillLabelTextWithShadow(
+        canvasContext,
+        occupancyText,
+        centerX,
+        226,
+        isLightMode
+    );
 
     const countdownText: string = String(countdownSeconds);
     canvasContext.font = COUNTDOWN_FONT_SPEC;
-    canvasContext.fillText(countdownText, centerX, 288);
+    fillLabelTextWithShadow(
+        canvasContext,
+        countdownText,
+        centerX,
+        288,
+        isLightMode
+    );
 }
 
 export function createLabelManager(
