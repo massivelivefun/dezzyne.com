@@ -175,6 +175,7 @@ a {
 .page-title {
   margin-top: 0;
   margin-bottom: 0.75rem;
+  color: #f0f0f0;
   -webkit-user-select: none;
   user-select: none;
 }
@@ -308,7 +309,7 @@ a {
   max-width: 44rem;
   margin-top: 0;
   margin-bottom: 2.35rem;
-  color: #dcdcdc;
+  color: #f0f0f0;
   font-size: 1.25rem;
   line-height: 1.72;
   text-wrap: pretty;
@@ -364,7 +365,7 @@ a {
   max-width: 44rem;
   margin-top: 0;
   margin-bottom: 1.85rem;
-  color: #dcdcdc;
+  color: #f0f0f0;
   font-size: 1.25rem;
   line-height: 1.72;
   text-wrap: pretty;
@@ -418,8 +419,8 @@ a {
 .form-field textarea {
   resize: vertical;
   min-height: 9rem;
-  max-height: max(9rem, calc(100vh - 39.5rem));
-  max-height: max(9rem, calc(100svh - 39.5rem));
+  max-height: max(9rem, calc(100vh - 41.65rem));
+  max-height: max(9rem, calc(100svh - 41.65rem));
   overflow-y: auto;
 }
 
@@ -430,19 +431,21 @@ a {
 .btn-submit {
   display: block;
   padding: 0.75rem 1.6rem;
-  background-color: #f0f0f0;
-  color: #000000;
-  border: none;
+  background-color: #363636;
+  color: #f0f0f0;
+  border: 1px solid #525252;
   border-radius: 6px;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .btn-submit:hover,
 .btn-submit:focus-visible {
-  background-color: #ffffff;
+  outline: none;
+  border-color: #e7e9ea;
+  background-color: #3d3d3d;
 }
 
 @media (min-width: 769px) and (max-height: 820px) {
@@ -473,10 +476,10 @@ a {
   }
 
   .form-field textarea {
-    min-height: clamp(4.5rem, calc(100vh - 33.5rem), 9rem);
-    min-height: clamp(4.5rem, calc(100svh - 33.5rem), 9rem);
-    max-height: max(4.5rem, calc(100vh - 33.5rem));
-    max-height: max(4.5rem, calc(100svh - 33.5rem));
+    min-height: clamp(4.5rem, calc(100vh - 35.2rem), 9rem);
+    min-height: clamp(4.5rem, calc(100svh - 35.2rem), 9rem);
+    max-height: max(4.5rem, calc(100vh - 35.2rem));
+    max-height: max(4.5rem, calc(100svh - 35.2rem));
   }
 
   .form-actions {
@@ -715,26 +718,66 @@ a {
 }
 
 @media (prefers-color-scheme: light) {
+  .site-stage {
+    background-color: #d5d9e0;
+  }
+
   .about-headline,
   .about-copy,
   .contact-intro,
   .form-field label,
   .not-found h2 {
-    text-shadow:
-      0 0 2px rgba(0, 0, 0, 0.85),
-      0 2px 2px rgba(0, 0, 0, 0.45);
+    color: #000000;
   }
 
-  .site-main a {
-    text-shadow: none;
+  .accent-link--games {
+    color: #e6192e;
+  }
+
+  .accent-link--ugce {
+    color: #009e49;
+  }
+
+  .accent-link--tools {
+    color: #005ce6;
+  }
+
+  .accent-link--storefront {
+    color: #6b21e8;
+  }
+
+  .accent-link:hover,
+  .accent-link:focus-visible {
+    color: #000000;
+  }
+
+  .form-field input,
+  .form-field textarea,
+  .btn-submit {
+    color-scheme: light;
+    background-color: #ffffff;
+    border-color: #9ca3af;
+    color: #000000;
+  }
+
+  .form-field input:focus,
+  .form-field textarea:focus,
+  .btn-submit:hover,
+  .btn-submit:focus-visible {
+    border-color: #000000;
+    background-color: #ffffff;
+  }
+}
+
+@media (prefers-color-scheme: light) and (min-width: 769px) {
+  .page-title {
+    color: rgba(0, 0, 0, 0.24);
   }
 }
 
 @media (prefers-color-scheme: light) and (max-width: 768px) {
   .page-title {
-    text-shadow:
-      0 0 2px rgba(0, 0, 0, 0.85),
-      0 2px 2px rgba(0, 0, 0, 0.45);
+    color: #000000;
   }
 }
 
@@ -742,6 +785,6 @@ a {
   and (max-height: 500px)
   and (orientation: landscape) {
   .site-stage .page-title {
-    text-shadow: none;
+    color: rgba(0, 0, 0, 0.24);
   }
 }
