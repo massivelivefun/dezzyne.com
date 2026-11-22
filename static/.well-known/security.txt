@@ -1,4 +1,4 @@
 Contact: https://www.dezzyne.com/contact/
 Expires: 2027-11-01T00:00:00.000Z
-Preferred-Languages: en, es, fr, de, ja
+Preferred-Languages: en, es, fr, de, it, pt, pl, ru, ja, ko, zh-CN, zh-TW
 Canonical: https://www.dezzyne.com/.well-known/security.txt

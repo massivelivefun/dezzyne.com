@@ -1,4 +1,7 @@
 {% extends "base.html" %}
+{% block head_preload %}
+    <link rel="modulepreload" href="/wasm/contact.js">
+{%- endblock head_preload %}
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 {% block content %}
 {%- if lang == config.default_language %}
@@ -20,10 +23,17 @@
     class="contact-form"
     name="contact"
     method="POST"
-    action="{{ language_prefix }}/thanks"
+    action="{{ language_prefix }}/contact/"
     accept-charset="utf-8"
     data-netlify="true"
-    netlify-honeypot="bot-field">
+    netlify-honeypot="bot-field"
+    data-error-required="{{ trans(key='error_required', lang=lang) }}"
+    data-error-email="{{ trans(key='error_email', lang=lang) }}"
+    data-error-short="{{ trans(key='error_short', lang=lang) }}"
+    data-error-send="{{ trans(key='error_send', lang=lang) }}"
+    data-thanks-body="{{ trans(key='thanks_body', lang=lang) }}"
+    data-nosnippet
+    novalidate>
     <input type="hidden" name="form-name" value="contact">
     <input
       type="hidden"
@@ -40,22 +50,44 @@
 
     <div class="form-row">
       <div class="form-field">
-        <label for="name">{{ trans(key="form_name", lang=lang) }}</label>
+        <div class="form-field-header">
+          <label id="label-name">
+            {{- trans(key="form_name", lang=lang) -}}
+          </label>
+          <span
+            id="error-name"
+            class="form-error"
+            role="alert"
+            aria-live="polite"></span>
+        </div>
         <input
           type="text"
           id="name"
           name="name"
+          aria-labelledby="label-name"
+          aria-describedby="error-name"
           autocomplete="name"
           minlength="2"
           maxlength="120"
           required>
       </div>
       <div class="form-field">
-        <label for="email">{{ trans(key="form_email", lang=lang) }}</label>
+        <div class="form-field-header">
+          <label id="label-email">
+            {{- trans(key="form_email", lang=lang) -}}
+          </label>
+          <span
+            id="error-email"
+            class="form-error"
+            role="alert"
+            aria-live="polite"></span>
+        </div>
         <input
           type="email"
           id="email"
           name="email"
+          aria-labelledby="label-email"
+          aria-describedby="error-email"
           autocomplete="email"
           maxlength="254"
           required>
@@ -63,21 +95,43 @@
     </div>
 
     <div class="form-field">
-      <label for="topic">{{ trans(key="form_subject", lang=lang) }}</label>
+      <div class="form-field-header">
+        <label id="label-topic">
+          {{- trans(key="form_subject", lang=lang) -}}
+        </label>
+        <span
+          id="error-topic"
+          class="form-error"
+          role="alert"
+          aria-live="polite"></span>
+      </div>
       <input
         type="text"
         id="topic"
         name="topic"
+        aria-labelledby="label-topic"
+        aria-describedby="error-topic"
         minlength="2"
         maxlength="200"
         required>
     </div>
 
     <div class="form-field form-field--message">
-      <label for="message">{{ trans(key="form_message", lang=lang) }}</label>
+      <div class="form-field-header">
+        <label id="label-message">
+          {{- trans(key="form_message", lang=lang) -}}
+        </label>
+        <span
+          id="error-message"
+          class="form-error"
+          role="alert"
+          aria-live="polite"></span>
+      </div>
       <textarea
         id="message"
         name="message"
+        aria-labelledby="label-message"
+        aria-describedby="error-message"
         rows="3"
         minlength="10"
         maxlength="5000"
@@ -88,7 +142,16 @@
       <button type="submit" class="btn-submit">
         {{- trans(key="form_send", lang=lang) -}}
       </button>
+      <p
+        id="form-status"
+        class="form-status"
+        role="status"
+        aria-live="polite"
+        hidden></p>
     </div>
   </form>
 </div>
 {% endblock content %}
+{% block scripts %}
+<script type="module" src="/wasm/contact.js"></script>
+{%- endblock scripts %}

@@ -6,7 +6,10 @@
   <h2 class="about-headline">
     {{- trans(key="tooling_headline", lang=lang) -}}
   </h2>
-  <p class="about-copy">{{ trans(key="tooling_body", lang=lang) }}</p>
+  <p class="about-copy">
+    {{ trans(key="tooling_body", lang=lang) }}<br>
+    {{ trans(key="tooling_prompt", lang=lang) }}
+  </p>
   <nav class="about-pillars" aria-label="Tooling storefronts">
     <a
       href="{{ config.extra.unity_store_url }}"
@@ -14,6 +17,13 @@
       target="_blank"
       rel="noopener noreferrer">
       {{- trans(key="tooling_unity_link", lang=lang) -}}
+    </a>
+    <a
+      href="{{ config.extra.patreon_url }}"
+      class="accent-link accent-link--patreon"
+      target="_blank"
+      rel="noopener noreferrer">
+      {{- trans(key="tooling_patreon_link", lang=lang) -}}
     </a>
   </nav>
   {%- if section.pages | length > 0 %}

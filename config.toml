@@ -16,6 +16,30 @@ theme = "github-dark"
 
 [translations]
 language_name = "English"
+og_locale = "en_US"
+meta_home = """\
+  Dezzyne is a software studio building standalone games, social \
+  virtual worlds, and production tools for game developers.\
+  """
+meta_about = """\
+  Learn about Dezzyne, LLC—an independent studio crafting \
+  standalone games, UGC virtual worlds, and studio pipeline tools.\
+  """
+meta_games = """\
+  Explore standalone games developed and published by Dezzyne, LLC.\
+  """
+meta_ugce = """\
+  Step into social virtual worlds and UGC experiences crafted by \
+  Dezzyne.\
+  """
+meta_tooling = """\
+  Production-ready Unity editor extensions, shaders, and pipeline \
+  utilities built by Dezzyne.\
+  """
+meta_contact = """\
+  Get in touch with Dezzyne, LLC regarding games, virtual worlds, \
+  tooling, or studio partnerships.\
+  """
 nav_about = "About"
 nav_games = "Games"
 nav_ugce = "UGCE"
@@ -35,29 +59,33 @@ form_subject = "Subject"
 form_message = "Message"
 form_send = "Send Message"
 thanks_body = """\
-  Thanks for reaching out. \
-  We've received your message and will get back to you soon.\
+  Thanks for reaching out. We've received your message and will get \
+  back to you soon.\
   """
-back_home = "Back to Home"
+error_required = "Required"
+error_email = "Invalid email"
+error_short = "Too short"
+error_send = "Could not send message. Please try again."
 not_found_message = "There's nothing here, you should turn back..."
 footer_rights = "All rights reserved."
 about_headline = "We build games, worlds, and studio tools."
 about_body = """\
   We are a fledgling software studio with a knack for delivering \
-  outstanding and inspiring standalone games, crafting social virtual \
-  worlds, and building tools that help other studios accelerate their \
-  production pipelines.\
+  outstanding and inspiring standalone games, crafting social \
+  virtual worlds, and building tools that help other studios \
+  accelerate their production pipelines.\
   """
 about_games_link = "Standalone Experiences"
 about_ugce_link = "UGC Experiences"
 about_tools_link = "Tooling"
 tooling_headline = "Empower your creativity."
 tooling_body = """\
-  We publish production-ready editor extensions, shaders, and pipeline \
-  utilities built to accelerate studio workflows. Browse our official \
-  releases below.\
+  We publish production-ready editor extensions, shaders, and \
+  pipeline utilities built to accelerate studio workflows.\
   """
+tooling_prompt = "Browse our official releases below."
 tooling_unity_link = "Unity Store"
+tooling_patreon_link = "Patreon"
 
 [languages.es]
 title = "Dezzyne"
@@ -65,6 +93,31 @@ build_search_index = false
 
 [languages.es.translations]
 language_name = "Español"
+og_locale = "es_ES"
+meta_home = """\
+  Dezzyne es un estudio de software que crea juegos independientes, \
+  mundos virtuales sociales y herramientas de producción.\
+  """
+meta_about = """\
+  Conoce Dezzyne, LLC: un estudio dedicado a juegos independientes, \
+  mundos virtuales UGC y herramientas para desarrolladores.\
+  """
+meta_games = """\
+  Explora los juegos independientes desarrollados y publicados por \
+  Dezzyne, LLC.\
+  """
+meta_ugce = """\
+  Descubre mundos virtuales sociales y experiencias UGC creadas por \
+  Dezzyne.\
+  """
+meta_tooling = """\
+  Extensiones de editor, shaders y utilidades de producción para \
+  Unity creadas por Dezzyne.\
+  """
+meta_contact = """\
+  Ponte en contacto con Dezzyne, LLC sobre juegos, experiencias \
+  virtuales o colaboraciones.\
+  """
 nav_about = "Acerca de"
 nav_games = "Juegos"
 nav_ugce = "UGCE"
@@ -77,8 +130,8 @@ label_platform = "Plataforma"
 form_honeypot = "No rellenes este campo:"
 contact_headline = "Ponte en contacto."
 contact_intro = """\
-  ¿Tienes preguntas sobre nuestros juegos, experiencias \
-  o colaboraciones?\
+  ¿Tienes preguntas sobre nuestros juegos, experiencias o \
+  colaboraciones?\
   """
 contact_prompt = "Envíanos un mensaje."
 form_name = "Nombre"
@@ -87,29 +140,34 @@ form_subject = "Asunto"
 form_message = "Mensaje"
 form_send = "Enviar mensaje"
 thanks_body = """\
-  Gracias por escribirnos. \
-  Hemos recibido tu mensaje y te responderemos pronto.\
+  Gracias por escribirnos. Hemos recibido tu mensaje y te \
+  responderemos pronto.\
   """
-back_home = "Volver al inicio"
+error_required = "Requerido"
+error_email = "No válido"
+error_short = "Muy corto"
+error_send = "No se pudo enviar el mensaje. Inténtalo de nuevo."
 not_found_message = "No hay nada aquí, deberías volver atrás..."
 footer_rights = "Todos los derechos reservados."
 about_headline = "Creamos juegos, mundos y herramientas de estudio."
 about_body = """\
-  Somos un joven estudio de software con talento para ofrecer juegos \
-  independientes extraordinarios e inspiradores, crear mundos virtuales \
-  sociales y desarrollar herramientas que ayudan a otros estudios a \
-  acelerar sus flujos de producción.\
+  Somos un joven estudio de software con talento para ofrecer \
+  juegos independientes extraordinarios e inspiradores, crear \
+  mundos virtuales sociales y desarrollar herramientas que ayudan a \
+  otros estudios a acelerar sus flujos de producción.\
   """
 about_games_link = "Experiencias Independientes"
 about_ugce_link = "Experiencias UGC"
 about_tools_link = "Herramientas"
 tooling_headline = "Impulsa tu creatividad."
 tooling_body = """\
-  Publicamos extensiones de editor, shaders y utilidades de producción \
-  diseñadas para acelerar el flujo de trabajo de otros estudios. Explora \
-  nuestros lanzamientos oficiales a continuación.\
+  Publicamos extensiones de editor, shaders y utilidades de \
+  producción diseñadas para acelerar el flujo de trabajo de otros \
+  estudios.\
   """
+tooling_prompt = "Explora nuestros lanzamientos oficiales a continuación."
 tooling_unity_link = "Unity Store"
+tooling_patreon_link = "Patreon"
 
 [languages.fr]
 title = "Dezzyne"
@@ -117,6 +175,31 @@ build_search_index = false
 
 [languages.fr.translations]
 language_name = "Français"
+og_locale = "fr_FR"
+meta_home = """\
+  Dezzyne est un studio logiciel créant des jeux autonomes, des \
+  mondes virtuels sociaux et des outils de production.\
+  """
+meta_about = """\
+  Découvrez Dezzyne, LLC, un studio dédié aux jeux autonomes, aux \
+  mondes virtuels UGC et aux outils pour développeurs.\
+  """
+meta_games = """\
+  Découvrez les jeux autonomes développés et publiés par Dezzyne, \
+  LLC.\
+  """
+meta_ugce = """\
+  Explorez les mondes virtuels sociaux et les expériences UGC \
+  signés Dezzyne.\
+  """
+meta_tooling = """\
+  Extensions d'éditeur Unity, shaders et utilitaires de pipeline \
+  prêts pour la production par Dezzyne.\
+  """
+meta_contact = """\
+  Contactez Dezzyne, LLC au sujet de nos jeux, mondes virtuels, \
+  outils ou partenariats.\
+  """
 nav_about = "À propos"
 nav_games = "Jeux"
 nav_ugce = "UGCE"
@@ -136,29 +219,34 @@ form_subject = "Sujet"
 form_message = "Message"
 form_send = "Envoyer le message"
 thanks_body = """\
-  Merci de nous avoir contactés. \
-  Nous avons bien reçu votre message et vous répondrons bientôt.\
+  Merci de nous avoir contactés. Nous avons bien reçu votre message \
+  et vous répondrons bientôt.\
   """
-back_home = "Retour à l'accueil"
+error_required = "Requis"
+error_email = "Format invalide"
+error_short = "Trop court"
+error_send = "Envoi impossible. Veuillez réessayer."
 not_found_message = "Il n'y a rien ici, vous devriez faire demi-tour..."
 footer_rights = "Tous droits réservés."
 about_headline = "Nous créons des jeux, des mondes et des outils."
 about_body = """\
-  Nous sommes un jeune studio logiciel avec un savoir-faire pour proposer \
-  des jeux autonomes exceptionnels et inspirants, créer des mondes virtuels \
-  sociaux et concevoir des outils aidant d'autres studios à accélérer leurs \
-  pipelines de production.\
+  Nous sommes un jeune studio logiciel avec un savoir-faire pour \
+  proposer des jeux autonomes exceptionnels et inspirants, créer \
+  des mondes virtuels sociaux et concevoir des outils aidant \
+  d'autres studios à accélérer leurs pipelines de production.\
   """
 about_games_link = "Expériences Autonomes"
 about_ugce_link = "Expériences UGC"
 about_tools_link = "Outils"
 tooling_headline = "Libérez votre créativité."
 tooling_body = """\
-  Nous publions des extensions d'éditeur, des shaders et des utilitaires \
-  de pipeline prêts pour la production afin d'accélérer les workflows des \
-  studios. Parcourez nos versions officielles ci-dessous.\
+  Nous publions des extensions d'éditeur, des shaders et des \
+  utilitaires de pipeline prêts pour la production afin d'accélérer \
+  les workflows des studios.\
   """
+tooling_prompt = "Parcourez nos versions officielles ci-dessous."
 tooling_unity_link = "Unity Store"
+tooling_patreon_link = "Patreon"
 
 [languages.de]
 title = "Dezzyne"
@@ -166,6 +254,28 @@ build_search_index = false
 
 [languages.de.translations]
 language_name = "Deutsch"
+og_locale = "de_DE"
+meta_home = """\
+  Dezzyne ist ein Softwarestudio für eigenständige Spiele, soziale \
+  virtuelle Welten und professionelle Entwickler-Tools.\
+  """
+meta_about = """\
+  Erfahre mehr über Dezzyne, LLC – unser Studio für eigenständige \
+  Spiele, soziale UGC-Welten und Pipeline-Werkzeuge.\
+  """
+meta_games = """\
+  Entdecke eigenständige Spiele, entwickelt und veröffentlicht von \
+  Dezzyne, LLC.\
+  """
+meta_ugce = "Erlebe soziale virtuelle Welten und UGC-Erlebnisse von Dezzyne."
+meta_tooling = """\
+  Produktionsreife Unity-Editor-Erweiterungen, Shader und \
+  Pipeline-Tools von Dezzyne.\
+  """
+meta_contact = """\
+  Kontaktiere Dezzyne, LLC zu Spielen, virtuellen Welten, Tools \
+  oder Partnerschaften.\
+  """
 nav_about = "Über uns"
 nav_games = "Spiele"
 nav_ugce = "UGCE"
@@ -185,29 +295,33 @@ form_subject = "Betreff"
 form_message = "Nachricht"
 form_send = "Nachricht senden"
 thanks_body = """\
-  Vielen Dank für deine Nachricht. \
-  Wir haben sie erhalten und melden uns bald zurück.\
+  Vielen Dank für deine Nachricht. Wir haben sie erhalten und \
+  melden uns bald zurück.\
   """
-back_home = "Zurück zur Startseite"
+error_required = "Pflichtfeld"
+error_email = "Ungültig"
+error_short = "Zu kurz"
+error_send = "Senden fehlgeschlagen. Bitte erneut versuchen."
 not_found_message = "Hier gibt es nichts, du solltest umkehren..."
 footer_rights = "Alle Rechte vorbehalten."
 about_headline = "Wir entwickeln Spiele, Welten und Studio-Tools."
 about_body = """\
   Wir sind ein aufstrebendes Softwarestudio mit einem Gespür für \
   außergewöhnliche und inspirierende eigenständige Spiele, soziale \
-  virtuelle Welten sowie die Entwicklung von Tools, mit denen andere \
-  Studios ihre Produktionspipelines beschleunigen.\
+  virtuelle Welten sowie die Entwicklung von Tools, mit denen \
+  andere Studios ihre Produktionspipelines beschleunigen.\
   """
 about_games_link = "Eigenständige Erlebnisse"
 about_ugce_link = "UGC-Erlebnisse"
 about_tools_link = "Tools"
 tooling_headline = "Entfalte deine Kreativität."
 tooling_body = """\
-  Wir veröffentlichen produktionsreife Editor-Erweiterungen, Shader und \
-  Pipeline-Werkzeuge, die Studio-Workflows beschleunigen. Entdecke unten \
-  unsere offiziellen Pakete.\
+  Wir veröffentlichen produktionsreife Editor-Erweiterungen, Shader \
+  und Pipeline-Werkzeuge, die Studio-Workflows beschleunigen.\
   """
+tooling_prompt = "Entdecke unten unsere offiziellen Pakete."
 tooling_unity_link = "Unity Store"
+tooling_patreon_link = "Patreon"
 
 [languages.ja]
 title = "Dezzyne"
@@ -215,6 +329,13 @@ build_search_index = false
 
 [languages.ja.translations]
 language_name = "日本語"
+og_locale = "ja_JP"
+meta_home = "Dezzyneは、スタンドアロンゲーム、ソーシャル仮想ワールド、スタジオ向け制作ツールを開発するソフトウェアスタジオです。"
+meta_about = "スタンドアロンゲーム、UGCワールド、開発パイプラインツールを手がけるDezzyne, LLCの概要。"
+meta_games = "Dezzyne, LLCが開発・パブリッシングするスタンドアロンゲーム一覧。"
+meta_ugce = "Dezzyneが制作するソーシャル仮想ワールドおよびUGC体験コンテンツ。"
+meta_tooling = "制作ワークフローを加速させるDezzyne製Unityエディタ拡張・シェーダー・パイプラインツール。"
+meta_contact = "ゲーム、仮想ワールド、ツール、パートナーシップに関するDezzyne, LLCへのお問い合わせ。"
 nav_about = "概要"
 nav_games = "ゲーム"
 nav_ugce = "UGCE"
@@ -233,32 +354,490 @@ form_email = "メールアドレス"
 form_subject = "件名"
 form_message = "メッセージ"
 form_send = "メッセージを送信"
-thanks_body = """\
-  お問い合わせありがとうございます。\
-  メッセージを受け付けました。折り返しご連絡いたします。\
-  """
-back_home = "ホームに戻る"
+thanks_body = "お問い合わせありがとうございます。メッセージを受け付けました。折り返しご連絡いたします。"
+error_required = "必須"
+error_email = "形式エラー"
+error_short = "文字数不足"
+error_send = "送信できませんでした。もう一度お試しください。"
 not_found_message = "ページが見つかりません。"
 footer_rights = "All rights reserved."
 about_headline = "私たちはゲーム、ワールド、開発ツールを創っています。"
 about_body = """\
-  私たちは、傑出した刺激的なスタンドアロンゲームの提供、ソーシャルな仮想\
-  ワールドの制作、そして他スタジオの制作パイプラインを加速させるツール開発を\
-  得意とする新進気鋭のソフトウェアスタジオです。\
+  私たちは、傑出した刺激的なスタンドアロンゲームの提供、ソーシャルな仮\
+  想ワールドの制作、そして他スタジオの制作パイプラインを加速させるツー\
+  ル開発を得意とする新進気鋭のソフトウェアスタジオです。\
   """
 about_games_link = "スタンドアロン体験"
 about_ugce_link = "UGC体験"
 about_tools_link = "ツール"
 tooling_headline = "創造力を解き放つ。"
-tooling_body = """\
-  スタジオの制作ワークフローを加速させる、実用的なエディタ拡張機能、\
-  シェーダー、パイプラインツールを公開しています。公式リリースは以下から\
-  ご覧いただけます。\
-  """
+tooling_body = "スタジオの制作ワークフローを加速させる、実用的なエディタ拡張機能、シェーダー、パイプラインツールを公開しています。"
+tooling_prompt = "公式リリースは以下からご覧いただけます。"
 tooling_unity_link = "Unity Store"
+tooling_patreon_link = "Patreon"
+
+[languages.ko]
+title = "Dezzyne"
+build_search_index = false
+
+[languages.ko.translations]
+language_name = "한국어"
+og_locale = "ko_KR"
+meta_home = "Dezzyne은 단독 패키지 게임, 소셜 가상 월드 및 게임 개발자용 제작 도구를 만드는 소프트웨어 스튜디오입니다."
+meta_about = "단독 게임, 소셜 UGC 가상 월드, 스튜디오 파이프라인 도구를 개발하는 Dezzyne, LLC 소개."
+meta_games = "Dezzyne, LLC가 개발하고 배급하는 단독 게임을 만나보세요."
+meta_ugce = "Dezzyne이 제작한 소셜 가상 월드와 UGC 체험 콘텐츠를 탐색하세요."
+meta_tooling = "스튜디오 워크플로를 가속하는 Dezzyne의 실무용 Unity 에디터 확장 및 셰이더 도구."
+meta_contact = "게임, 가상 월드, 개발 도구 및 파트너십에 관해 Dezzyne, LLC에 문의하세요."
+nav_about = "소개"
+nav_games = "게임"
+nav_ugce = "UGCE"
+nav_tooling = "도구"
+nav_contact = "문의"
+back_all_games = "모든 게임"
+back_all_ugce = "모든 UGCE"
+back_all_tooling = "모든 도구"
+label_platform = "플랫폼"
+form_honeypot = "이 칸은 비워 두세요:"
+contact_headline = "문의하기."
+contact_intro = "게임, 체험 콘텐츠 또는 파트너십에 대해 궁금한 점이 있으신가요?"
+contact_prompt = "아래 양식으로 메시지를 보내주세요."
+form_name = "이름"
+form_email = "이메일"
+form_subject = "제목"
+form_message = "메시지"
+form_send = "메시지 보내기"
+thanks_body = "문의해 주셔서 감사합니다. 메시지가 접수되었으며 곧 답변드리겠습니다."
+error_required = "필수 항목"
+error_email = "형식 오류"
+error_short = "글자 수 부족"
+error_send = "전송하지 못했습니다. 다시 시도해 주세요."
+not_found_message = "이곳에는 아무것도 없습니다. 돌아가시는 것이 좋겠습니다..."
+footer_rights = "All rights reserved."
+about_headline = "우리는 게임, 월드, 스튜디오 도구를 만듭니다."
+about_body = """\
+  우리는 깊이 있고 영감을 주는 단독 게임을 선보이고, 소셜 가상 월드를 구축하며, 다른 스튜디오의 제작 파이프라인을 \
+  가속하는 도구를 개발하는 신예 소프트웨어 스튜디오입니다.\
+  """
+about_games_link = "단독 게임 경험"
+about_ugce_link = "UGC 경험"
+about_tools_link = "개발 도구"
+tooling_headline = "창의성에 날개를 달다."
+tooling_body = "스튜디오 워크플로를 가속하는 실무용 에디터 확장 기능, 셰이더 및 파이프라인 유틸리티를 배포합니다."
+tooling_prompt = "아래에서 공식 출시 도구를 확인해 보세요."
+tooling_unity_link = "Unity Store"
+tooling_patreon_link = "Patreon"
+
+[languages.zh-cn]
+title = "Dezzyne"
+build_search_index = false
+
+[languages.zh-cn.translations]
+language_name = "简体中文"
+og_locale = "zh_CN"
+meta_home = "Dezzyne 是一家打造独立游戏、社交虚拟世界与游戏研发生产工具的软件工作室。"
+meta_about = "了解 Dezzyne, LLC——专注于独立游戏、UGC 虚拟世界与工作室管线工具的软件团队。"
+meta_games = "探索由 Dezzyne, LLC 开发与发行的独立游戏作品。"
+meta_ugce = "走进由 Dezzyne 打造的社交虚拟世界与 UGC 互动体验。"
+meta_tooling = "由 Dezzyne 打造的实用级 Unity 编辑器扩展、着色器与制作管线工具。"
+meta_contact = "就游戏、虚拟世界、开发工具或商务合作联系 Dezzyne, LLC。"
+nav_about = "关于"
+nav_games = "游戏"
+nav_ugce = "UGCE"
+nav_tooling = "工具"
+nav_contact = "联系"
+back_all_games = "全部游戏"
+back_all_ugce = "全部 UGCE"
+back_all_tooling = "全部工具"
+label_platform = "平台"
+form_honeypot = "请勿填写此栏："
+contact_headline = "联系我们。"
+contact_intro = "对我们的游戏、虚拟体验或商务合作有疑问？"
+contact_prompt = "请在下方给我们留言。"
+form_name = "姓名"
+form_email = "电子邮箱"
+form_subject = "主题"
+form_message = "留言内容"
+form_send = "发送消息"
+thanks_body = "感谢您的来信。我们已收到您的消息，并将尽快回复。"
+error_required = "必填"
+error_email = "格式无效"
+error_short = "字数过少"
+error_send = "发送失败，请稍后重试。"
+not_found_message = "这里什么也没有，建议您返回上一页..."
+footer_rights = "保留所有权利。"
+about_headline = "我们打造游戏、虚拟世界与开发工具。"
+about_body = "我们是一家新兴软件工作室，专注于交付出色且富有启发性的独立游戏、构建社交虚拟世界，并研发帮助其他工作室加速制作管线的开发工具。"
+about_games_link = "独立游戏体验"
+about_ugce_link = "UGC 体验"
+about_tools_link = "开发工具"
+tooling_headline = "释放你的创造力。"
+tooling_body = "我们发布可直接用于生产的编辑器扩展、着色器与管线工具，助力工作室提速增效。"
+tooling_prompt = "欢迎在下方浏览官方发布内容。"
+tooling_unity_link = "Unity Store"
+tooling_patreon_link = "Patreon"
+
+[languages.zh-tw]
+title = "Dezzyne"
+build_search_index = false
+
+[languages.zh-tw.translations]
+language_name = "繁體中文"
+og_locale = "zh_TW"
+meta_home = "Dezzyne 是一家打造獨立遊戲、社交虛擬世界與遊戲開發製作工具的軟體工作室。"
+meta_about = "認識 Dezzyne, LLC——專注於獨立遊戲、UGC 虛擬世界與工作室管線工具的開發團隊。"
+meta_games = "探索由 Dezzyne, LLC 開發與發行的獨立遊戲作品。"
+meta_ugce = "走進由 Dezzyne 打造的社交虛擬世界與 UGC 互動體驗。"
+meta_tooling = "由 Dezzyne 打造的量產級 Unity 編輯器擴充功能、著色器與管線工具。"
+meta_contact = "就遊戲、虛擬世界、開發工具或合作事宜聯絡 Dezzyne, LLC。"
+nav_about = "關於"
+nav_games = "遊戲"
+nav_ugce = "UGCE"
+nav_tooling = "工具"
+nav_contact = "聯絡"
+back_all_games = "所有遊戲"
+back_all_ugce = "所有 UGCE"
+back_all_tooling = "所有工具"
+label_platform = "平台"
+form_honeypot = "請勿填寫此欄："
+contact_headline = "聯絡我們。"
+contact_intro = "對我們的遊戲、虛擬體驗或合作夥伴關係有任何疑問嗎？"
+contact_prompt = "請於下方留言給我們。"
+form_name = "姓名"
+form_email = "電子郵件"
+form_subject = "主旨"
+form_message = "訊息內容"
+form_send = "傳送訊息"
+thanks_body = "感謝您的來信。我們已收到您的訊息，將盡快回覆您。"
+error_required = "必填"
+error_email = "格式無效"
+error_short = "字數過少"
+error_send = "傳送失敗，請再試一次。"
+not_found_message = "這裡什麼也沒有，建議您返回..."
+footer_rights = "保留所有權利。"
+about_headline = "我們打造遊戲、虛擬世界與工作室工具。"
+about_body = "我們是一家新銳軟體工作室，擅長打造出色且富啟發性的獨立遊戲、構築社交虛擬世界，並開發協助其他工作室加速製作流程的工具。"
+about_games_link = "獨立遊戲體驗"
+about_ugce_link = "UGC 體驗"
+about_tools_link = "開發工具"
+tooling_headline = "釋放你的創造力。"
+tooling_body = "我們發布可直接投入量產的編輯器擴充功能、著色器與管線工具，協助工作室加速開發流程。"
+tooling_prompt = "歡迎於下方瀏覽官方發行項目。"
+tooling_unity_link = "Unity Store"
+tooling_patreon_link = "Patreon"
+
+[languages.pt]
+title = "Dezzyne"
+build_search_index = false
+
+[languages.pt.translations]
+language_name = "Português"
+og_locale = "pt_BR"
+meta_home = """\
+  Dezzyne é um estúdio de software que cria jogos independentes, \
+  mundos virtuais sociais e ferramentas de produção.\
+  """
+meta_about = """\
+  Conheça a Dezzyne, LLC — estúdio focado em jogos independentes, \
+  mundos virtuais UGC e ferramentas para desenvolvedores.\
+  """
+meta_games = """\
+  Explore os jogos independentes desenvolvidos e publicados pela \
+  Dezzyne, LLC.\
+  """
+meta_ugce = """\
+  Explore mundos virtuais sociais e experiências UGC criadas pela \
+  Dezzyne.\
+  """
+meta_tooling = """\
+  Extensões de editor Unity, shaders e utilitários de pipeline \
+  prontos para produção pela Dezzyne.\
+  """
+meta_contact = """\
+  Entre em contato com a Dezzyne, LLC sobre jogos, mundos virtuais, \
+  ferramentas ou parcerias.\
+  """
+nav_about = "Sobre"
+nav_games = "Jogos"
+nav_ugce = "UGCE"
+nav_tooling = "Ferramentas"
+nav_contact = "Contato"
+back_all_games = "Todos os jogos"
+back_all_ugce = "Todo o UGCE"
+back_all_tooling = "Todas as ferramentas"
+label_platform = "Plataforma"
+form_honeypot = "Não preencha este campo:"
+contact_headline = "Entre em contato."
+contact_intro = "Dúvidas sobre nossos jogos, experiências ou parcerias?"
+contact_prompt = "Envie uma mensagem abaixo."
+form_name = "Nome"
+form_email = "E-mail"
+form_subject = "Assunto"
+form_message = "Mensagem"
+form_send = "Enviar mensagem"
+thanks_body = """\
+  Obrigado pelo contato. Recebemos sua mensagem e responderemos em \
+  breve.\
+  """
+error_required = "Obrigatório"
+error_email = "Inválido"
+error_short = "Muito curto"
+error_send = "Não foi possível enviar. Tente novamente."
+not_found_message = "Não há nada aqui, melhor voltar..."
+footer_rights = "Todos os direitos reservados."
+about_headline = "Criamos jogos, mundos e ferramentas de estúdio."
+about_body = """\
+  Somos um jovem estúdio de software dedicado a entregar jogos \
+  independentes marcantes e inspiradores, criar mundos virtuais \
+  sociais e desenvolver ferramentas que ajudam outros estúdios a \
+  acelerar seus pipelines de produção.\
+  """
+about_games_link = "Experiências Independentes"
+about_ugce_link = "Experiências UGC"
+about_tools_link = "Ferramentas"
+tooling_headline = "Potencialize sua criatividade."
+tooling_body = """\
+  Publicamos extensões de editor, shaders e utilitários de pipeline \
+  prontos para produção para acelerar o fluxo de trabalho de \
+  estúdios.\
+  """
+tooling_prompt = "Confira nossos lançamentos oficiais abaixo."
+tooling_unity_link = "Unity Store"
+tooling_patreon_link = "Patreon"
+
+[languages.pl]
+title = "Dezzyne"
+build_search_index = false
+
+[languages.pl.translations]
+language_name = "Polski"
+og_locale = "pl_PL"
+meta_home = """\
+  Dezzyne to studio programistyczne tworzące gry niezależne, \
+  społecznościowe światy wirtualne oraz narzędzia produkcyjne.\
+  """
+meta_about = """\
+  Poznaj Dezzyne, LLC — studio tworzące samodzielne gry, światy \
+  wirtualne UGC oraz narzędzia dla twórców gier.\
+  """
+meta_games = "Odkryj samodzielne gry tworzone i wydawane przez Dezzyne, LLC."
+meta_ugce = """\
+  Wejdź do społecznościowych światów wirtualnych i doświadczeń UGC \
+  stworzonych przez Dezzyne.\
+  """
+meta_tooling = """\
+  Gotowe do produkcji rozszerzenia edytora Unity, shadery i \
+  narzędzia pipeline od Dezzyne.\
+  """
+meta_contact = """\
+  Skontaktuj się z Dezzyne, LLC w sprawie gier, światów \
+  wirtualnych, narzędzi lub współpracy.\
+  """
+nav_about = "O nas"
+nav_games = "Gry"
+nav_ugce = "UGCE"
+nav_tooling = "Narzędzia"
+nav_contact = "Kontakt"
+back_all_games = "Wszystkie gry"
+back_all_ugce = "Wszystkie UGCE"
+back_all_tooling = "Wszystkie narzędzia"
+label_platform = "Platforma"
+form_honeypot = "Nie wypełniaj tego pola:"
+contact_headline = "Skontaktuj się z nami."
+contact_intro = "Masz pytania dotyczące naszych gier, światów lub współpracy?"
+contact_prompt = "Napisz do nas poniżej."
+form_name = "Imię"
+form_email = "E-mail"
+form_subject = "Temat"
+form_message = "Wiadomość"
+form_send = "Wyślij wiadomość"
+thanks_body = "Dziękujemy za wiadomość. Otrzymaliśmy ją i wkrótce odpowiemy."
+error_required = "Wymagane"
+error_email = "Nieprawidłowy"
+error_short = "Za krótkie"
+error_send = "Nie udało się wysłać. Spróbuj ponownie."
+not_found_message = "Nic tu nie ma, lepiej zawrócić..."
+footer_rights = "Wszelkie prawa zastrzeżone."
+about_headline = "Tworzymy gry, światy i narzędzia studyjne."
+about_body = """\
+  Jesteśmy młodym studiem programistycznym z pasją do tworzenia \
+  wyjątkowych i inspirujących gier samodzielnych, budowania \
+  społecznościowych światów wirtualnych oraz rozwijania narzędzi \
+  przyspieszających pracę innych studiów.\
+  """
+about_games_link = "Gry Samodzielne"
+about_ugce_link = "Doświadczenia UGC"
+about_tools_link = "Narzędzia"
+tooling_headline = "Uwolnij swoją kreatywność."
+tooling_body = """\
+  Publikujemy gotowe do produkcji rozszerzenia edytora, shadery \
+  oraz narzędzia usprawniające procesy produkcyjne w studiach.\
+  """
+tooling_prompt = "Sprawdź nasze oficjalne wydania poniżej."
+tooling_unity_link = "Unity Store"
+tooling_patreon_link = "Patreon"
+
+[languages.ru]
+title = "Dezzyne"
+build_search_index = false
+
+[languages.ru.translations]
+language_name = "Русский"
+og_locale = "ru_RU"
+meta_home = """\
+  Dezzyne — студия разработки самостоятельных игр, социальных \
+  виртуальных миров и профессиональных инструментов.\
+  """
+meta_about = """\
+  О студии Dezzyne, LLC: разработка самостоятельных игр, \
+  виртуальных миров UGC и инструментов для игровых студий.\
+  """
+meta_games = """\
+  Самостоятельные игры, разработанные и изданные студией Dezzyne, \
+  LLC.\
+  """
+meta_ugce = """\
+  Социальные виртуальные миры и UGC-проекты, созданные студией \
+  Dezzyne.\
+  """
+meta_tooling = """\
+  Готовые к продакшену расширения редактора Unity, шейдеры и \
+  пайплайн-утилиты от Dezzyne.\
+  """
+meta_contact = """\
+  Свяжитесь с Dezzyne, LLC по вопросам игр, виртуальных миров, \
+  инструментов или партнёрства.\
+  """
+nav_about = "О нас"
+nav_games = "Игры"
+nav_ugce = "UGCE"
+nav_tooling = "Инструменты"
+nav_contact = "Контакты"
+back_all_games = "Все игры"
+back_all_ugce = "Все UGCE"
+back_all_tooling = "Все инструменты"
+label_platform = "Платформа"
+form_honeypot = "Не заполняйте это поле:"
+contact_headline = "Свяжитесь с нами."
+contact_intro = "Есть вопросы о наших играх, мирах или сотрудничестве?"
+contact_prompt = "Отправьте нам сообщение ниже."
+form_name = "Имя"
+form_email = "Эл. почта"
+form_subject = "Тема"
+form_message = "Сообщение"
+form_send = "Отправить сообщение"
+thanks_body = """\
+  Спасибо за обращение. Мы получили ваше сообщение и скоро ответим.\
+  """
+error_required = "Обязательно"
+error_email = "Некорректно"
+error_short = "Слишком коротко"
+error_send = "Не удалось отправить. Попробуйте снова."
+not_found_message = "Здесь ничего нет, лучше повернуть назад..."
+footer_rights = "Все права защищены."
+about_headline = "Мы создаём игры, миры и студийные инструменты."
+about_body = """\
+  Мы молодая софтверная студия, создающая яркие и вдохновляющие \
+  самостоятельные игры, социальные виртуальные миры, а также \
+  инструменты, помогающие другим студиям ускорять производственные \
+  пайплайны.\
+  """
+about_games_link = "Самостоятельные Игры"
+about_ugce_link = "UGC-Проекты"
+about_tools_link = "Инструменты"
+tooling_headline = "Раскройте свой творческий потенциал."
+tooling_body = """\
+  Мы выпускаем готовые к продакшену расширения редактора, шейдеры и \
+  утилиты пайплайна для ускорения работы студий.\
+  """
+tooling_prompt = "Ознакомьтесь с официальными релизами ниже."
+tooling_unity_link = "Unity Store"
+tooling_patreon_link = "Patreon"
+
+[languages.it]
+title = "Dezzyne"
+build_search_index = false
+
+[languages.it.translations]
+language_name = "Italiano"
+og_locale = "it_IT"
+meta_home = """\
+  Dezzyne è uno studio software che realizza giochi standalone, \
+  mondi virtuali social e strumenti di produzione.\
+  """
+meta_about = """\
+  Scopri Dezzyne, LLC: uno studio dedicato a giochi standalone, \
+  mondi virtuali UGC e strumenti per sviluppatori.\
+  """
+meta_games = """\
+  Esplora i giochi standalone sviluppati e pubblicati da Dezzyne, \
+  LLC.\
+  """
+meta_ugce = """\
+  Entra nei mondi virtuali social e nelle esperienze UGC firmate \
+  Dezzyne.\
+  """
+meta_tooling = """\
+  Estensioni per l'editor Unity, shader e utilità di pipeline \
+  pronti per la produzione di Dezzyne.\
+  """
+meta_contact = """\
+  Contatta Dezzyne, LLC per informazioni su giochi, mondi virtuali, \
+  strumenti o partnership.\
+  """
+nav_about = "Chi siamo"
+nav_games = "Giochi"
+nav_ugce = "UGCE"
+nav_tooling = "Strumenti"
+nav_contact = "Contatti"
+back_all_games = "Tutti i giochi"
+back_all_ugce = "Tutto l'UGCE"
+back_all_tooling = "Tutti gli strumenti"
+label_platform = "Piattaforma"
+form_honeypot = "Non compilare questo campo:"
+contact_headline = "Contattaci."
+contact_intro = "Domande sui nostri giochi, esperienze o partnership?"
+contact_prompt = "Inviaci un messaggio qui sotto."
+form_name = "Nome"
+form_email = "E-mail"
+form_subject = "Oggetto"
+form_message = "Messaggio"
+form_send = "Invia messaggio"
+thanks_body = """\
+  Grazie per averci scritto. Abbiamo ricevuto il tuo messaggio e ti \
+  risponderemo presto.\
+  """
+error_required = "Obbligatorio"
+error_email = "Non valido"
+error_short = "Troppo corto"
+error_send = "Invio non riuscito. Riprova."
+not_found_message = "Qui non c'è nulla, dovresti tornare indietro..."
+footer_rights = "Tutti i diritti riservati."
+about_headline = "Creiamo giochi, mondi e strumenti per studi."
+about_body = """\
+  Siamo un giovane studio software con il talento per realizzare \
+  giochi standalone straordinari e ispiranti, dare vita a mondi \
+  virtuali social e creare strumenti che aiutano altri studi ad \
+  accelerare le proprie pipeline di produzione.\
+  """
+about_games_link = "Esperienze Standalone"
+about_ugce_link = "Esperienze UGC"
+about_tools_link = "Strumenti"
+tooling_headline = "Dai forza alla tua creatività."
+tooling_body = """\
+  Pubblichiamo estensioni per l'editor, shader e utilità di \
+  pipeline pronti per la produzione per accelerare i flussi di \
+  lavoro degli studi.\
+  """
+tooling_prompt = "Scopri le nostre release ufficiali qui sotto."
+tooling_unity_link = "Unity Store"
+tooling_patreon_link = "Patreon"
 
 [extra]
 unity_store_url = "https://assetstore.unity.com/"
+patreon_url = "https://www.patreon.com/dezzyne"
+og_image = "/img/og-card.png"
+twitter_handle = "@dezzyne_soft"
 
 [[extra.socials]]
 id = "twitter"
@@ -277,6 +856,12 @@ id = "discord"
 name = "Discord"
 url = ""
 icon = "/img/icons/discord.svg"
+
+[[extra.socials]]
+id = "patreon"
+name = "Patreon"
+url = "https://www.patreon.com/dezzyne"
+icon = "/img/icons/patreon.svg"
 
 [[extra.socials]]
 id = "unity"

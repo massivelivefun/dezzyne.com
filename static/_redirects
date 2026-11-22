@@ -1,58 +1,161 @@
-/en          /                    301
-/en/*        /:splat              301
+/en          /                       301
+/en/*        /:splat                 301
 
-/            /es/                 302!  Language=es
-/about       /es/about/           302!  Language=es
-/about/*     /es/about/:splat     302!  Language=es
-/games       /es/games/           302!  Language=es
-/games/*     /es/games/:splat     302!  Language=es
-/ugce        /es/ugce/            302!  Language=es
-/ugce/*      /es/ugce/:splat      302!  Language=es
-/tooling     /es/tooling/         302!  Language=es
-/tooling/*   /es/tooling/:splat   302!  Language=es
-/contact     /es/contact/         302!  Language=es
-/contact/*   /es/contact/:splat   302!  Language=es
+/            /es/                    302!  Language=es
+/about       /es/about/              302!  Language=es
+/about/*     /es/about/:splat        302!  Language=es
+/games       /es/games/              302!  Language=es
+/games/*     /es/games/:splat        302!  Language=es
+/ugce        /es/ugce/               302!  Language=es
+/ugce/*      /es/ugce/:splat         302!  Language=es
+/tooling     /es/tooling/            302!  Language=es
+/tooling/*   /es/tooling/:splat      302!  Language=es
+/contact     /es/contact/            302!  Language=es
+/contact/*   /es/contact/:splat      302!  Language=es
 
-/            /fr/                 302!  Language=fr
-/about       /fr/about/           302!  Language=fr
-/about/*     /fr/about/:splat     302!  Language=fr
-/games       /fr/games/           302!  Language=fr
-/games/*     /fr/games/:splat     302!  Language=fr
-/ugce        /fr/ugce/            302!  Language=fr
-/ugce/*      /fr/ugce/:splat      302!  Language=fr
-/tooling     /fr/tooling/         302!  Language=fr
-/tooling/*   /fr/tooling/:splat   302!  Language=fr
-/contact     /fr/contact/         302!  Language=fr
-/contact/*   /fr/contact/:splat   302!  Language=fr
+/            /fr/                    302!  Language=fr
+/about       /fr/about/              302!  Language=fr
+/about/*     /fr/about/:splat        302!  Language=fr
+/games       /fr/games/              302!  Language=fr
+/games/*     /fr/games/:splat        302!  Language=fr
+/ugce        /fr/ugce/               302!  Language=fr
+/ugce/*      /fr/ugce/:splat         302!  Language=fr
+/tooling     /fr/tooling/            302!  Language=fr
+/tooling/*   /fr/tooling/:splat      302!  Language=fr
+/contact     /fr/contact/            302!  Language=fr
+/contact/*   /fr/contact/:splat      302!  Language=fr
 
-/            /de/                 302!  Language=de
-/about       /de/about/           302!  Language=de
-/about/*     /de/about/:splat     302!  Language=de
-/games       /de/games/           302!  Language=de
-/games/*     /de/games/:splat     302!  Language=de
-/ugce        /de/ugce/            302!  Language=de
-/ugce/*      /de/ugce/:splat      302!  Language=de
-/tooling     /de/tooling/         302!  Language=de
-/tooling/*   /de/tooling/:splat   302!  Language=de
-/contact     /de/contact/         302!  Language=de
-/contact/*   /de/contact/:splat   302!  Language=de
+/            /de/                    302!  Language=de
+/about       /de/about/              302!  Language=de
+/about/*     /de/about/:splat        302!  Language=de
+/games       /de/games/              302!  Language=de
+/games/*     /de/games/:splat        302!  Language=de
+/ugce        /de/ugce/               302!  Language=de
+/ugce/*      /de/ugce/:splat         302!  Language=de
+/tooling     /de/tooling/            302!  Language=de
+/tooling/*   /de/tooling/:splat      302!  Language=de
+/contact     /de/contact/            302!  Language=de
+/contact/*   /de/contact/:splat      302!  Language=de
 
-/            /ja/                 302!  Language=ja
-/about       /ja/about/           302!  Language=ja
-/about/*     /ja/about/:splat     302!  Language=ja
-/games       /ja/games/           302!  Language=ja
-/games/*     /ja/games/:splat     302!  Language=ja
-/ugce        /ja/ugce/            302!  Language=ja
-/ugce/*      /ja/ugce/:splat      302!  Language=ja
-/tooling     /ja/tooling/         302!  Language=ja
-/tooling/*   /ja/tooling/:splat   302!  Language=ja
-/contact     /ja/contact/         302!  Language=ja
-/contact/*   /ja/contact/:splat   302!  Language=ja
+/            /it/                    302!  Language=it
+/about       /it/about/              302!  Language=it
+/about/*     /it/about/:splat        302!  Language=it
+/games       /it/games/              302!  Language=it
+/games/*     /it/games/:splat        302!  Language=it
+/ugce        /it/ugce/               302!  Language=it
+/ugce/*      /it/ugce/:splat         302!  Language=it
+/tooling     /it/tooling/            302!  Language=it
+/tooling/*   /it/tooling/:splat      302!  Language=it
+/contact     /it/contact/            302!  Language=it
+/contact/*   /it/contact/:splat      302!  Language=it
 
-/404.html    /404/                301!
+/            /pt/                    302!  Language=pt
+/about       /pt/about/              302!  Language=pt
+/about/*     /pt/about/:splat        302!  Language=pt
+/games       /pt/games/              302!  Language=pt
+/games/*     /pt/games/:splat        302!  Language=pt
+/ugce        /pt/ugce/               302!  Language=pt
+/ugce/*      /pt/ugce/:splat         302!  Language=pt
+/tooling     /pt/tooling/            302!  Language=pt
+/tooling/*   /pt/tooling/:splat      302!  Language=pt
+/contact     /pt/contact/            302!  Language=pt
+/contact/*   /pt/contact/:splat      302!  Language=pt
 
-/es/*        /es/404/             404
-/fr/*        /fr/404/             404
-/de/*        /de/404/             404
-/ja/*        /ja/404/             404
-/*           /404/                404
+/            /pl/                    302!  Language=pl
+/about       /pl/about/              302!  Language=pl
+/about/*     /pl/about/:splat        302!  Language=pl
+/games       /pl/games/              302!  Language=pl
+/games/*     /pl/games/:splat        302!  Language=pl
+/ugce        /pl/ugce/               302!  Language=pl
+/ugce/*      /pl/ugce/:splat         302!  Language=pl
+/tooling     /pl/tooling/            302!  Language=pl
+/tooling/*   /pl/tooling/:splat      302!  Language=pl
+/contact     /pl/contact/            302!  Language=pl
+/contact/*   /pl/contact/:splat      302!  Language=pl
+
+/            /ru/                    302!  Language=ru
+/about       /ru/about/              302!  Language=ru
+/about/*     /ru/about/:splat        302!  Language=ru
+/games       /ru/games/              302!  Language=ru
+/games/*     /ru/games/:splat        302!  Language=ru
+/ugce        /ru/ugce/               302!  Language=ru
+/ugce/*      /ru/ugce/:splat         302!  Language=ru
+/tooling     /ru/tooling/            302!  Language=ru
+/tooling/*   /ru/tooling/:splat      302!  Language=ru
+/contact     /ru/contact/            302!  Language=ru
+/contact/*   /ru/contact/:splat      302!  Language=ru
+
+/            /ja/                    302!  Language=ja
+/about       /ja/about/              302!  Language=ja
+/about/*     /ja/about/:splat        302!  Language=ja
+/games       /ja/games/              302!  Language=ja
+/games/*     /ja/games/:splat        302!  Language=ja
+/ugce        /ja/ugce/               302!  Language=ja
+/ugce/*      /ja/ugce/:splat         302!  Language=ja
+/tooling     /ja/tooling/            302!  Language=ja
+/tooling/*   /ja/tooling/:splat      302!  Language=ja
+/contact     /ja/contact/            302!  Language=ja
+/contact/*   /ja/contact/:splat      302!  Language=ja
+
+/            /ko/                    302!  Language=ko
+/about       /ko/about/              302!  Language=ko
+/about/*     /ko/about/:splat        302!  Language=ko
+/games       /ko/games/              302!  Language=ko
+/games/*     /ko/games/:splat        302!  Language=ko
+/ugce        /ko/ugce/               302!  Language=ko
+/ugce/*      /ko/ugce/:splat         302!  Language=ko
+/tooling     /ko/tooling/            302!  Language=ko
+/tooling/*   /ko/tooling/:splat      302!  Language=ko
+/contact     /ko/contact/            302!  Language=ko
+/contact/*   /ko/contact/:splat      302!  Language=ko
+
+/            /zh-tw/                 302!  Language=zh-tw,zh-hk,zh-hant,zh-mo
+/about       /zh-tw/about/           302!  Language=zh-tw,zh-hk,zh-hant,zh-mo
+/about/*     /zh-tw/about/:splat     302!  Language=zh-tw,zh-hk,zh-hant,zh-mo
+/games       /zh-tw/games/           302!  Language=zh-tw,zh-hk,zh-hant,zh-mo
+/games/*     /zh-tw/games/:splat     302!  Language=zh-tw,zh-hk,zh-hant,zh-mo
+/ugce        /zh-tw/ugce/            302!  Language=zh-tw,zh-hk,zh-hant,zh-mo
+/ugce/*      /zh-tw/ugce/:splat      302!  Language=zh-tw,zh-hk,zh-hant,zh-mo
+/tooling     /zh-tw/tooling/         302!  Language=zh-tw,zh-hk,zh-hant,zh-mo
+/tooling/*   /zh-tw/tooling/:splat   302!  Language=zh-tw,zh-hk,zh-hant,zh-mo
+/contact     /zh-tw/contact/         302!  Language=zh-tw,zh-hk,zh-hant,zh-mo
+/contact/*   /zh-tw/contact/:splat   302!  Language=zh-tw,zh-hk,zh-hant,zh-mo
+
+/            /zh-tw/                 302!  Country=tw,hk,mo  Language=zh
+/about       /zh-tw/about/           302!  Country=tw,hk,mo  Language=zh
+/about/*     /zh-tw/about/:splat     302!  Country=tw,hk,mo  Language=zh
+/games       /zh-tw/games/           302!  Country=tw,hk,mo  Language=zh
+/games/*     /zh-tw/games/:splat     302!  Country=tw,hk,mo  Language=zh
+/ugce        /zh-tw/ugce/            302!  Country=tw,hk,mo  Language=zh
+/ugce/*      /zh-tw/ugce/:splat      302!  Country=tw,hk,mo  Language=zh
+/tooling     /zh-tw/tooling/         302!  Country=tw,hk,mo  Language=zh
+/tooling/*   /zh-tw/tooling/:splat   302!  Country=tw,hk,mo  Language=zh
+/contact     /zh-tw/contact/         302!  Country=tw,hk,mo  Language=zh
+/contact/*   /zh-tw/contact/:splat   302!  Country=tw,hk,mo  Language=zh
+
+/            /zh-cn/                 302!  Language=zh,zh-cn,zh-hans,zh-sg
+/about       /zh-cn/about/           302!  Language=zh,zh-cn,zh-hans,zh-sg
+/about/*     /zh-cn/about/:splat     302!  Language=zh,zh-cn,zh-hans,zh-sg
+/games       /zh-cn/games/           302!  Language=zh,zh-cn,zh-hans,zh-sg
+/games/*     /zh-cn/games/:splat     302!  Language=zh,zh-cn,zh-hans,zh-sg
+/ugce        /zh-cn/ugce/            302!  Language=zh,zh-cn,zh-hans,zh-sg
+/ugce/*      /zh-cn/ugce/:splat      302!  Language=zh,zh-cn,zh-hans,zh-sg
+/tooling     /zh-cn/tooling/         302!  Language=zh,zh-cn,zh-hans,zh-sg
+/tooling/*   /zh-cn/tooling/:splat   302!  Language=zh,zh-cn,zh-hans,zh-sg
+/contact     /zh-cn/contact/         302!  Language=zh,zh-cn,zh-hans,zh-sg
+/contact/*   /zh-cn/contact/:splat   302!  Language=zh,zh-cn,zh-hans,zh-sg
+
+/404.html    /404/                   301!
+
+/es/*        /es/404/                404
+/fr/*        /fr/404/                404
+/de/*        /de/404/                404
+/it/*        /it/404/                404
+/pt/*        /pt/404/                404
+/pl/*        /pl/404/                404
+/ru/*        /ru/404/                404
+/ja/*        /ja/404/                404
+/ko/*        /ko/404/                404
+/zh-tw/*     /zh-tw/404/             404
+/zh-cn/*     /zh-cn/404/             404
+/*           /404/                   404

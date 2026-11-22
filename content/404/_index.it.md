@@ -1,0 +1,5 @@
++++
+title = "404"
+template = "404.html"
+hidden = true
++++
