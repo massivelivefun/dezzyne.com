@@ -1,0 +1,42 @@
+# Dezzyne
+
+> Dezzyne, LLC is an independent software studio building standalone games,
+> crafting social virtual worlds (UGCE), and publishing production-ready tools
+> that accelerate game studio workflows.
+
+## Studio Pillars
+
+- [About](https://www.dezzyne.com/about/): Overview of Dezzyne, LLC and our
+  three core focus areas.
+- [Games](https://www.dezzyne.com/games/): Standalone games developed and
+  published by Dezzyne, LLC.
+- [UGCE](https://www.dezzyne.com/ugce/): Social virtual worlds and user
+  generated content experiences crafted by Dezzyne.
+- [Tooling](https://www.dezzyne.com/tooling/): Production-ready Unity editor
+  extensions, shaders, and pipeline utilities available via the Unity Asset
+  Store and Patreon.
+- [Contact](https://www.dezzyne.com/contact/): Inquiries regarding games,
+  virtual worlds, tooling, and studio partnerships.
+
+## Official Profiles
+
+- [X (Twitter)](https://x.com/dezzyne_soft)
+- [YouTube](https://www.youtube.com/@dezzyne)
+- [Patreon](https://www.patreon.com/dezzyne)
+- [Unity Asset Store](https://assetstore.unity.com/)
+
+## Localization
+
+Official localized editions are published at:
+- English: https://www.dezzyne.com/
+- Español: https://www.dezzyne.com/es/
+- Français: https://www.dezzyne.com/fr/
+- Deutsch: https://www.dezzyne.com/de/
+- Italiano: https://www.dezzyne.com/it/
+- Português: https://www.dezzyne.com/pt/
+- Polski: https://www.dezzyne.com/pl/
+- Русский: https://www.dezzyne.com/ru/
+- 日本語: https://www.dezzyne.com/ja/
+- 한국어: https://www.dezzyne.com/ko/
+- 简体中文: https://www.dezzyne.com/zh-cn/
+- 繁體中文: https://www.dezzyne.com/zh-tw/
