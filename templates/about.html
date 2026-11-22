@@ -10,7 +10,9 @@
 <div class="about-body">
   <h2 class="about-headline">{{ trans(key="about_headline", lang=lang) }}</h2>
   <p class="about-copy">{{ trans(key="about_body", lang=lang) }}</p>
-  <nav class="about-pillars" aria-label="Studio focus">
+  <nav
+    class="about-pillars"
+    aria-label="{{ trans(key='aria_studio_focus', lang=lang) }}">
     <a
       href="{{ language_prefix }}/games/"
       class="accent-link accent-link--games">

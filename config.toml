@@ -40,11 +40,19 @@ meta_contact = """\
   Get in touch with Dezzyne, LLC regarding games, virtual worlds, \
   tooling, or studio partnerships.\
   """
+meta_privacy = """\
+  Privacy policy for Dezzyne, LLC covering website inquiries, \
+  standalone games, social virtual worlds, and studio tools.\
+  """
+nav_home = "Home"
 nav_about = "About"
 nav_games = "Games"
 nav_ugce = "UGCE"
 nav_tooling = "Tooling"
 nav_contact = "Contact"
+aria_main_nav = "Main navigation"
+aria_studio_focus = "Studio focus"
+aria_storefronts = "Tooling storefronts"
 back_all_games = "All Games"
 back_all_ugce = "All UGCE"
 back_all_tooling = "All Tooling"
@@ -86,6 +94,17 @@ tooling_body = """\
 tooling_prompt = "Browse our official releases below."
 tooling_unity_link = "Unity Store"
 tooling_patreon_link = "Patreon"
+privacy_headline = "Your privacy, respected by design."
+privacy_body_1 = """\
+  This website uses no advertising trackers, analytics cookies, or \
+  third-party scripts. Details you submit through our Contact form \
+  are used solely by Dezzyne, LLC to reply to your inquiry.\
+  """
+privacy_body_2 = """\
+  Our standalone games, virtual worlds, and developer tools collect \
+  no unnecessary personal data. Storefront and platform accounts \
+  are governed by each platform's own privacy policy.\
+  """
 
 [languages.es]
 title = "Dezzyne"
@@ -118,11 +137,19 @@ meta_contact = """\
   Ponte en contacto con Dezzyne, LLC sobre juegos, experiencias \
   virtuales o colaboraciones.\
   """
+meta_privacy = """\
+  Política de privacidad de Dezzyne, LLC sobre consultas web, \
+  juegos independientes, mundos virtuales y herramientas.\
+  """
+nav_home = "Inicio"
 nav_about = "Acerca de"
 nav_games = "Juegos"
 nav_ugce = "UGCE"
 nav_tooling = "Herramientas"
 nav_contact = "Contacto"
+aria_main_nav = "Navegación principal"
+aria_studio_focus = "Áreas del estudio"
+aria_storefronts = "Tiendas de herramientas"
 back_all_games = "Todos los juegos"
 back_all_ugce = "Todo el UGCE"
 back_all_tooling = "Todas las herramientas"
@@ -168,6 +195,19 @@ tooling_body = """\
 tooling_prompt = "Explora nuestros lanzamientos oficiales a continuación."
 tooling_unity_link = "Unity Store"
 tooling_patreon_link = "Patreon"
+privacy_headline = "Tu privacidad, respetada por diseño."
+privacy_body_1 = """\
+  Este sitio web no utiliza rastreadores publicitarios, cookies \
+  analíticas ni scripts de terceros. Los datos enviados mediante el \
+  formulario de Contacto se usan únicamente por Dezzyne, LLC para \
+  responder a tu consulta.\
+  """
+privacy_body_2 = """\
+  Nuestros juegos independientes, mundos virtuales y herramientas \
+  no recopilan datos personales innecesarios. Las cuentas de \
+  tiendas y plataformas se rigen por la política de privacidad de \
+  cada plataforma.\
+  """
 
 [languages.fr]
 title = "Dezzyne"
@@ -200,11 +240,19 @@ meta_contact = """\
   Contactez Dezzyne, LLC au sujet de nos jeux, mondes virtuels, \
   outils ou partenariats.\
   """
+meta_privacy = """\
+  Politique de confidentialité de Dezzyne, LLC pour le site web, \
+  les jeux autonomes, les mondes virtuels et les outils.\
+  """
+nav_home = "Accueil"
 nav_about = "À propos"
 nav_games = "Jeux"
 nav_ugce = "UGCE"
 nav_tooling = "Outils"
 nav_contact = "Contact"
+aria_main_nav = "Navigation principale"
+aria_studio_focus = "Pôles du studio"
+aria_storefronts = "Boutiques d'outils"
 back_all_games = "Tous les jeux"
 back_all_ugce = "Tout l'UGCE"
 back_all_tooling = "Tous les outils"
@@ -247,6 +295,19 @@ tooling_body = """\
 tooling_prompt = "Parcourez nos versions officielles ci-dessous."
 tooling_unity_link = "Unity Store"
 tooling_patreon_link = "Patreon"
+privacy_headline = "Votre vie privée, respectée dès la conception."
+privacy_body_1 = """\
+  Ce site n'utilise aucun suivi publicitaire, cookie analytique ni \
+  script tiers. Les informations transmises via notre formulaire de \
+  Contact sont utilisées uniquement par Dezzyne, LLC pour répondre \
+  à votre demande.\
+  """
+privacy_body_2 = """\
+  Nos jeux autonomes, mondes virtuels et outils ne collectent \
+  aucune donnée personnelle superflue. Les comptes de boutiques et \
+  plateformes relèvent de la politique de confidentialité propre à \
+  chaque service.\
+  """
 
 [languages.de]
 title = "Dezzyne"
@@ -276,11 +337,19 @@ meta_contact = """\
   Kontaktiere Dezzyne, LLC zu Spielen, virtuellen Welten, Tools \
   oder Partnerschaften.\
   """
+meta_privacy = """\
+  Datenschutzerklärung von Dezzyne, LLC für Website-Anfragen, \
+  eigenständige Spiele, virtuelle Welten und Studio-Tools.\
+  """
+nav_home = "Startseite"
 nav_about = "Über uns"
 nav_games = "Spiele"
 nav_ugce = "UGCE"
 nav_tooling = "Tools"
 nav_contact = "Kontakt"
+aria_main_nav = "Hauptnavigation"
+aria_studio_focus = "Schwerpunkte des Studios"
+aria_storefronts = "Tool-Stores"
 back_all_games = "Alle Spiele"
 back_all_ugce = "Alle UGCE"
 back_all_tooling = "Alle Tools"
@@ -322,6 +391,19 @@ tooling_body = """\
 tooling_prompt = "Entdecke unten unsere offiziellen Pakete."
 tooling_unity_link = "Unity Store"
 tooling_patreon_link = "Patreon"
+privacy_headline = "Datenschutz aus Überzeugung."
+privacy_body_1 = """\
+  Diese Website verwendet keine Werbe-Tracker, Analyse-Cookies oder \
+  Drittanbieter-Skripte. Angaben über unser Kontaktformular werden \
+  von Dezzyne, LLC ausschließlich zur Beantwortung deiner Anfrage \
+  genutzt.\
+  """
+privacy_body_2 = """\
+  Unsere eigenständigen Spiele, virtuellen Welten und \
+  Entwickler-Tools erheben keine unnötigen personenbezogenen Daten. \
+  Für Store- und Plattformkonten gelten die Datenschutzrichtlinien \
+  der jeweiligen Plattform.\
+  """
 
 [languages.ja]
 title = "Dezzyne"
@@ -336,11 +418,16 @@ meta_games = "Dezzyne, LLCが開発・パブリッシングするスタンドア
 meta_ugce = "Dezzyneが制作するソーシャル仮想ワールドおよびUGC体験コンテンツ。"
 meta_tooling = "制作ワークフローを加速させるDezzyne製Unityエディタ拡張・シェーダー・パイプラインツール。"
 meta_contact = "ゲーム、仮想ワールド、ツール、パートナーシップに関するDezzyne, LLCへのお問い合わせ。"
+meta_privacy = "Dezzyne, LLCのウェブサイト、スタンドアロンゲーム、仮想ワールド、開発ツールに関するプライバシーポリシー。"
+nav_home = "ホーム"
 nav_about = "概要"
 nav_games = "ゲーム"
 nav_ugce = "UGCE"
 nav_tooling = "ツール"
 nav_contact = "お問い合わせ"
+aria_main_nav = "メインナビゲーション"
+aria_studio_focus = "スタジオの事業領域"
+aria_storefronts = "ツール配信ストア"
 back_all_games = "すべてのゲーム"
 back_all_ugce = "すべてのUGCE"
 back_all_tooling = "すべてのツール"
@@ -375,6 +462,16 @@ tooling_body = "スタジオの制作ワークフローを加速させる、実�
 tooling_prompt = "公式リリースは以下からご覧いただけます。"
 tooling_unity_link = "Unity Store"
 tooling_patreon_link = "Patreon"
+privacy_headline = "設計段階からプライバシーを尊重します。"
+privacy_body_1 = """\
+  当サイトでは広告トラッカー、解析用Cookie、外部スクリプトを一切使用していません。お問い合わせフォームから送信された情報は、Dezzyne, \
+  LLCがご返信する目的にのみ使用されます。\
+  """
+privacy_body_2 = """\
+  当社のスタンドアロンゲーム、仮想ワールド、開発ツールが不要な個人情報\
+  を収集することはありません。各ストアおよびプラットフォーム上のアカウ\
+  ント情報は、各運営元のプライバシーポリシーに従います。\
+  """
 
 [languages.ko]
 title = "Dezzyne"
@@ -389,11 +486,16 @@ meta_games = "Dezzyne, LLC가 개발하고 배급하는 단독 게임을 만나�
 meta_ugce = "Dezzyne이 제작한 소셜 가상 월드와 UGC 체험 콘텐츠를 탐색하세요."
 meta_tooling = "스튜디오 워크플로를 가속하는 Dezzyne의 실무용 Unity 에디터 확장 및 셰이더 도구."
 meta_contact = "게임, 가상 월드, 개발 도구 및 파트너십에 관해 Dezzyne, LLC에 문의하세요."
+meta_privacy = "웹사이트 문의, 단독 게임, 가상 월드 및 개발 도구에 관한 Dezzyne, LLC 개인정보 처리방침."
+nav_home = "홈"
 nav_about = "소개"
 nav_games = "게임"
 nav_ugce = "UGCE"
 nav_tooling = "도구"
 nav_contact = "문의"
+aria_main_nav = "주요 메뉴"
+aria_studio_focus = "스튜디오 주요 분야"
+aria_storefronts = "도구 스토어"
 back_all_games = "모든 게임"
 back_all_ugce = "모든 UGCE"
 back_all_tooling = "모든 도구"
@@ -427,6 +529,15 @@ tooling_body = "스튜디오 워크플로를 가속하는 실무용 에디터 �
 tooling_prompt = "아래에서 공식 출시 도구를 확인해 보세요."
 tooling_unity_link = "Unity Store"
 tooling_patreon_link = "Patreon"
+privacy_headline = "설계부터 존중하는 개인정보 보호."
+privacy_body_1 = """\
+  본 웹사이트는 광고 추적기, 분석 쿠키 또는 제3자 스크립트를 사용하지 않습니다. 문의 양식을 통해 제출하신 정보는 \
+  Dezzyne, LLC가 문의에 답변하는 목적으로만 사용됩니다.\
+  """
+privacy_body_2 = """\
+  당사의 단독 게임, 가상 월드 및 개발 도구는 불필요한 개인정보를 수집하지 않습니다. 각 스토어 및 플랫폼 계정 \
+  데이터는 해당 플랫폼의 개인정보 처리방침을 따릅니다.\
+  """
 
 [languages.zh-cn]
 title = "Dezzyne"
@@ -441,11 +552,16 @@ meta_games = "探索由 Dezzyne, LLC 开发与发行的独立游戏作品。"
 meta_ugce = "走进由 Dezzyne 打造的社交虚拟世界与 UGC 互动体验。"
 meta_tooling = "由 Dezzyne 打造的实用级 Unity 编辑器扩展、着色器与制作管线工具。"
 meta_contact = "就游戏、虚拟世界、开发工具或商务合作联系 Dezzyne, LLC。"
+meta_privacy = "Dezzyne, LLC 隐私政策，涵盖网站咨询、独立游戏、社交虚拟世界与开发工具。"
+nav_home = "首页"
 nav_about = "关于"
 nav_games = "游戏"
 nav_ugce = "UGCE"
 nav_tooling = "工具"
 nav_contact = "联系"
+aria_main_nav = "主导航"
+aria_studio_focus = "工作室核心业务"
+aria_storefronts = "工具商店"
 back_all_games = "全部游戏"
 back_all_ugce = "全部 UGCE"
 back_all_tooling = "全部工具"
@@ -476,6 +592,12 @@ tooling_body = "我们发布可直接用于生产的编辑器扩展、着色器�
 tooling_prompt = "欢迎在下方浏览官方发布内容。"
 tooling_unity_link = "Unity Store"
 tooling_patreon_link = "Patreon"
+privacy_headline = "从设计之初尊重您的隐私。"
+privacy_body_1 = """\
+  本网站不使用任何广告追踪器、分析类 Cookie 或第三方脚本。您通过联系表单提交的信息仅由 Dezzyne, LLC \
+  用于回复您的咨询。\
+  """
+privacy_body_2 = "我们的独立游戏、虚拟世界与开发工具不会收集任何不必要的个人数据。商店与平台账户信息均遵循各对应平台的隐私政策。"
 
 [languages.zh-tw]
 title = "Dezzyne"
@@ -490,11 +612,16 @@ meta_games = "探索由 Dezzyne, LLC 開發與發行的獨立遊戲作品。"
 meta_ugce = "走進由 Dezzyne 打造的社交虛擬世界與 UGC 互動體驗。"
 meta_tooling = "由 Dezzyne 打造的量產級 Unity 編輯器擴充功能、著色器與管線工具。"
 meta_contact = "就遊戲、虛擬世界、開發工具或合作事宜聯絡 Dezzyne, LLC。"
+meta_privacy = "Dezzyne, LLC 隱私權政策，涵蓋網站諮詢、獨立遊戲、社交虛擬世界與開發工具。"
+nav_home = "首頁"
 nav_about = "關於"
 nav_games = "遊戲"
 nav_ugce = "UGCE"
 nav_tooling = "工具"
 nav_contact = "聯絡"
+aria_main_nav = "主導覽列"
+aria_studio_focus = "工作室核心領域"
+aria_storefronts = "工具商店"
 back_all_games = "所有遊戲"
 back_all_ugce = "所有 UGCE"
 back_all_tooling = "所有工具"
@@ -525,6 +652,12 @@ tooling_body = "我們發布可直接投入量產的編輯器擴充功能、著�
 tooling_prompt = "歡迎於下方瀏覽官方發行項目。"
 tooling_unity_link = "Unity Store"
 tooling_patreon_link = "Patreon"
+privacy_headline = "從設計之初尊重您的隱私。"
+privacy_body_1 = """\
+  本網站不使用任何廣告追蹤器、分析型 Cookie 或第三方指令碼。您透過聯絡表單提交的資料僅供 Dezzyne, LLC \
+  用於回覆您的詢問。\
+  """
+privacy_body_2 = "我們的獨立遊戲、虛擬世界與開發工具不會收集不必要的個人資料。各商店與平台帳戶資料均依據該平台自身的隱私權政策處理。"
 
 [languages.pt]
 title = "Dezzyne"
@@ -557,11 +690,19 @@ meta_contact = """\
   Entre em contato com a Dezzyne, LLC sobre jogos, mundos virtuais, \
   ferramentas ou parcerias.\
   """
+meta_privacy = """\
+  Política de privacidade da Dezzyne, LLC para consultas no site, \
+  jogos independentes, mundos virtuais e ferramentas.\
+  """
+nav_home = "Início"
 nav_about = "Sobre"
 nav_games = "Jogos"
 nav_ugce = "UGCE"
 nav_tooling = "Ferramentas"
 nav_contact = "Contato"
+aria_main_nav = "Navegação principal"
+aria_studio_focus = "Foco do estúdio"
+aria_storefronts = "Lojas de ferramentas"
 back_all_games = "Todos os jogos"
 back_all_ugce = "Todo o UGCE"
 back_all_tooling = "Todas as ferramentas"
@@ -604,6 +745,19 @@ tooling_body = """\
 tooling_prompt = "Confira nossos lançamentos oficiais abaixo."
 tooling_unity_link = "Unity Store"
 tooling_patreon_link = "Patreon"
+privacy_headline = "Sua privacidade, respeitada desde a concepção."
+privacy_body_1 = """\
+  Este site não utiliza rastreadores de anúncios, cookies \
+  analíticos nem scripts de terceiros. Os dados enviados pelo \
+  formulário de Contato são usados exclusivamente pela Dezzyne, LLC \
+  para responder à sua mensagem.\
+  """
+privacy_body_2 = """\
+  Nossos jogos independentes, mundos virtuais e ferramentas não \
+  coletam dados pessoais desnecessários. Contas de lojas e \
+  plataformas seguem a política de privacidade de cada respectiva \
+  plataforma.\
+  """
 
 [languages.pl]
 title = "Dezzyne"
@@ -633,11 +787,19 @@ meta_contact = """\
   Skontaktuj się z Dezzyne, LLC w sprawie gier, światów \
   wirtualnych, narzędzi lub współpracy.\
   """
+meta_privacy = """\
+  Polityka prywatności Dezzyne, LLC dotycząca zapytań ze strony, \
+  gier samodzielnych, światów wirtualnych i narzędzi.\
+  """
+nav_home = "Strona główna"
 nav_about = "O nas"
 nav_games = "Gry"
 nav_ugce = "UGCE"
 nav_tooling = "Narzędzia"
 nav_contact = "Kontakt"
+aria_main_nav = "Główna nawigacja"
+aria_studio_focus = "Obszary działalności studia"
+aria_storefronts = "Sklepy z narzędziami"
 back_all_games = "Wszystkie gry"
 back_all_ugce = "Wszystkie UGCE"
 back_all_tooling = "Wszystkie narzędzia"
@@ -676,6 +838,18 @@ tooling_body = """\
 tooling_prompt = "Sprawdź nasze oficjalne wydania poniżej."
 tooling_unity_link = "Unity Store"
 tooling_patreon_link = "Patreon"
+privacy_headline = "Twoja prywatność, szanowana od podstaw."
+privacy_body_1 = """\
+  Ta strona nie używa trackerów reklamowych, analitycznych plików \
+  cookie ani zewnętrznych skryptów. Dane przesłane przez formularz \
+  Kontakt służą wyłącznie firmie Dezzyne, LLC do udzielenia \
+  odpowiedzi.\
+  """
+privacy_body_2 = """\
+  Nasze samodzielne gry, światy wirtualne i narzędzia deweloperskie \
+  nie zbierają zbędnych danych osobowych. Konta na platformach i w \
+  sklepach podlegają politykom prywatności poszczególnych serwisów.\
+  """
 
 [languages.ru]
 title = "Dezzyne"
@@ -708,11 +882,19 @@ meta_contact = """\
   Свяжитесь с Dezzyne, LLC по вопросам игр, виртуальных миров, \
   инструментов или партнёрства.\
   """
+meta_privacy = """\
+  Политика конфиденциальности Dezzyne, LLC в отношении обращений на \
+  сайте, самостоятельных игр, миров и инструментов.\
+  """
+nav_home = "Главная"
 nav_about = "О нас"
 nav_games = "Игры"
 nav_ugce = "UGCE"
 nav_tooling = "Инструменты"
 nav_contact = "Контакты"
+aria_main_nav = "Основная навигация"
+aria_studio_focus = "Направления студии"
+aria_storefronts = "Магазины инструментов"
 back_all_games = "Все игры"
 back_all_ugce = "Все UGCE"
 back_all_tooling = "Все инструменты"
@@ -753,6 +935,19 @@ tooling_body = """\
 tooling_prompt = "Ознакомьтесь с официальными релизами ниже."
 tooling_unity_link = "Unity Store"
 tooling_patreon_link = "Patreon"
+privacy_headline = "Уважение к вашей конфиденциальности по умолчанию."
+privacy_body_1 = """\
+  Этот сайт не использует рекламные трекеры, аналитические cookie и \
+  сторонние скрипты. Данные, отправленные через форму обратной \
+  связи, используются Dezzyne, LLC исключительно для ответа на ваш \
+  запрос.\
+  """
+privacy_body_2 = """\
+  Наши самостоятельные игры, виртуальные миры и инструменты не \
+  собирают лишних персональных данных. Учётные записи магазинов и \
+  платформ регулируются политиками конфиденциальности \
+  соответствующих сервисов.\
+  """
 
 [languages.it]
 title = "Dezzyne"
@@ -785,11 +980,19 @@ meta_contact = """\
   Contatta Dezzyne, LLC per informazioni su giochi, mondi virtuali, \
   strumenti o partnership.\
   """
+meta_privacy = """\
+  Informativa sulla privacy di Dezzyne, LLC per richieste sul sito, \
+  giochi standalone, mondi virtuali e strumenti.\
+  """
+nav_home = "Home"
 nav_about = "Chi siamo"
 nav_games = "Giochi"
 nav_ugce = "UGCE"
 nav_tooling = "Strumenti"
 nav_contact = "Contatti"
+aria_main_nav = "Navigazione principale"
+aria_studio_focus = "Aree dello studio"
+aria_storefronts = "Store degli strumenti"
 back_all_games = "Tutti i giochi"
 back_all_ugce = "Tutto l'UGCE"
 back_all_tooling = "Tutti gli strumenti"
@@ -832,6 +1035,19 @@ tooling_body = """\
 tooling_prompt = "Scopri le nostre release ufficiali qui sotto."
 tooling_unity_link = "Unity Store"
 tooling_patreon_link = "Patreon"
+privacy_headline = "La tua privacy, rispettata per scelta progettuale."
+privacy_body_1 = """\
+  Questo sito non utilizza tracker pubblicitari, cookie analitici \
+  né script di terze parti. I dati inviati tramite il modulo \
+  Contatti sono usati esclusivamente da Dezzyne, LLC per rispondere \
+  alla tua richiesta.\
+  """
+privacy_body_2 = """\
+  I nostri giochi standalone, mondi virtuali e strumenti di \
+  sviluppo non raccolgono dati personali superflui. Gli account di \
+  store e piattaforme sono regolati dalle rispettive informative \
+  sulla privacy.\
+  """
 
 [extra]
 unity_store_url = "https://assetstore.unity.com/"

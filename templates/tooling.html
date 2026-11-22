@@ -10,7 +10,9 @@
     {{ trans(key="tooling_body", lang=lang) }}<br>
     {{ trans(key="tooling_prompt", lang=lang) }}
   </p>
-  <nav class="about-pillars" aria-label="Tooling storefronts">
+  <nav
+    class="about-pillars"
+    aria-label="{{ trans(key='aria_storefronts', lang=lang) }}">
     <a
       href="{{ config.extra.unity_store_url }}"
       class="accent-link accent-link--storefront"

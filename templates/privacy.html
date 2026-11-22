@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
+{% block content %}
+{%- if lang == config.default_language %}
+  {%- set language_prefix = "" %}
+{%- else %}
+  {%- set language_prefix = "/" ~ lang %}
+{%- endif %}
+<h1 class="page-title">{{ page.title }}</h1>
+<div class="about-body">
+  <h2 class="about-headline">
+    {{- trans(key="privacy_headline", lang=lang) -}}
+  </h2>
+  <p class="about-copy">{{ trans(key="privacy_body_1", lang=lang) }}</p>
+  <p class="about-copy">{{ trans(key="privacy_body_2", lang=lang) }}</p>
+  <nav class="about-pillars" aria-label="{{ page.title }}">
+    <a
+      href="{{ language_prefix }}/contact/"
+      class="accent-link accent-link--tools">
+      {{- trans(key="nav_contact", lang=lang) -}}
+    </a>
+  </nav>
+</div>
+{% endblock content %}
