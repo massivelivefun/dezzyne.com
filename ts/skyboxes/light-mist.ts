@@ -8,13 +8,16 @@ import {
 const MIST_MAIN_BODY: GlslSnippet = asGlslSnippet(`
     float skyMask = smoothstep(-0.02, 0.12, elevation);
 
-    vec3 horizonSilver = vec3(0.902, 0.918, 0.941);
-    vec3 midSilver = vec3(0.822, 0.855, 0.902);
-    vec3 zenithSlate = vec3(0.715, 0.768, 0.842);
-    float zenithFactor = smoothstep(0.0, 0.70, max(elevation, 0.0));
-    vec3 overcastBase = mix(midSilver, zenithSlate, zenithFactor);
+    vec3 floorHorizon = vec3(0.1686, 0.173, 0.184);
+    vec3 horizonSilver = vec3(0.735, 0.785, 0.855);
+    vec3 midSilver = vec3(0.585, 0.648, 0.745);
+    vec3 zenithSlate = vec3(0.435, 0.508, 0.635);
+    float lowMist = smoothstep(0.0, 0.22, max(elevation, 0.0));
+    float zenithFactor = smoothstep(0.16, 0.70, max(elevation, 0.0));
+    vec3 upperOvercast = mix(midSilver, zenithSlate, zenithFactor);
+    vec3 mistDome = mix(horizonSilver, upperOvercast, lowMist);
     vec3 skyColor =
-        mix(horizonSilver, overcastBase, smoothstep(-0.02, 0.15, elevation));
+        mix(floorHorizon, mistDome, smoothstep(-0.035, 0.06, elevation));
 
     mat2 mistRotation = mat2(0.86, -0.51, 0.51, 0.86);
     vec2 mistUv0 =
@@ -28,12 +31,12 @@ const MIST_MAIN_BODY: GlslSnippet = asGlslSnippet(`
     vec3 mistWeights = vec3(0.52, 0.32, 0.16);
     float mistField = dot(mistLayers, mistWeights);
     float brightBreaks = smoothstep(0.44, 0.78, mistField) * skyMask;
-    vec3 coolCloudColor = vec3(0.748, 0.792, 0.858);
-    vec3 diffusedBreakColor = vec3(0.955, 0.968, 0.988);
+    vec3 coolCloudColor = vec3(0.495, 0.558, 0.665);
+    vec3 diffusedBreakColor = vec3(0.885, 0.918, 0.962);
     skyColor = mix(
         skyColor,
         coolCloudColor,
-        (1.0 - mistField) * skyMask * 0.28
+        (1.0 - mistField) * skyMask * 0.30
     );
     skyColor = mix(skyColor, diffusedBreakColor, brightBreaks * 0.52);
 
