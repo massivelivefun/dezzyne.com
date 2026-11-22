@@ -27,10 +27,8 @@ back_all_tooling = "All Tooling"
 label_platform = "Platform"
 form_honeypot = "Do not fill this out:"
 contact_headline = "Get in touch."
-contact_intro = """\
-  Questions about our games, experiences, or partnerships? \
-  Send us a message below.\
-  """
+contact_intro = "Questions about our games, experiences, or partnerships?"
+contact_prompt = "Send us a message below."
 form_name = "Name"
 form_email = "Email"
 form_subject = "Subject"
@@ -80,8 +78,9 @@ form_honeypot = "No rellenes este campo:"
 contact_headline = "Ponte en contacto."
 contact_intro = """\
   ¿Tienes preguntas sobre nuestros juegos, experiencias \
-  o colaboraciones? Envíanos un mensaje.\
+  o colaboraciones?\
   """
+contact_prompt = "Envíanos un mensaje."
 form_name = "Nombre"
 form_email = "Correo electrónico"
 form_subject = "Asunto"
@@ -129,10 +128,8 @@ back_all_tooling = "Tous les outils"
 label_platform = "Plateforme"
 form_honeypot = "Ne remplissez pas ce champ :"
 contact_headline = "Contactez-nous."
-contact_intro = """\
-  Une question sur nos jeux, expériences ou partenariats ? \
-  Envoyez-nous un message ci-dessous.\
-  """
+contact_intro = "Une question sur nos jeux, expériences ou partenariats ?"
+contact_prompt = "Envoyez-nous un message ci-dessous."
 form_name = "Nom"
 form_email = "E-mail"
 form_subject = "Sujet"
@@ -180,10 +177,8 @@ back_all_tooling = "Alle Tools"
 label_platform = "Plattform"
 form_honeypot = "Dieses Feld nicht ausfüllen:"
 contact_headline = "Nimm Kontakt auf."
-contact_intro = """\
-  Fragen zu unseren Spielen, Erlebnissen oder Partnerschaften? \
-  Schreib uns unten eine Nachricht.\
-  """
+contact_intro = "Fragen zu unseren Spielen, Erlebnissen oder Partnerschaften?"
+contact_prompt = "Schreib uns unten eine Nachricht."
 form_name = "Name"
 form_email = "E-Mail"
 form_subject = "Betreff"
@@ -231,10 +226,8 @@ back_all_tooling = "すべてのツール"
 label_platform = "プラットフォーム"
 form_honeypot = "入力しないでください:"
 contact_headline = "お気軽にご連絡ください。"
-contact_intro = """\
-  ゲーム、体験コンテンツ、パートナーシップに関するご質問はございますか？\
-  以下のフォームよりメッセージをお送りください。\
-  """
+contact_intro = "ゲーム、体験コンテンツ、パートナーシップに関するご質問はございますか？"
+contact_prompt = "以下のフォームよりメッセージをお送りください。"
 form_name = "お名前"
 form_email = "メールアドレス"
 form_subject = "件名"
