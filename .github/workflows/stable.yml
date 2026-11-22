@@ -38,13 +38,13 @@ jobs:
 
     steps:
       - name: Checkout verified commit
-        uses: actions/checkout@v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           persist-credentials: false
 
       - name: Setup Node.js 22
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: "22"
           package-manager-cache: false
@@ -61,9 +61,13 @@ jobs:
         run: |
           ZOLA_URL="https://github.com/getzola/zola/releases/download"
           ZOLA_TAR="zola-v0.23.6-x86_64-unknown-linux-gnu.tar.gz"
+          ZOLA_SHA="8f5132b3522412d04e395e0b25f6d686"
+          ZOLA_SHA="${ZOLA_SHA}13ad272a873e54a2b3ebf664873024a4"
           curl --proto '=https' --tlsv1.2 -sSfL \
-            "${ZOLA_URL}/v0.23.6/${ZOLA_TAR}" \
-            | sudo tar xz -C /usr/local/bin
+            "${ZOLA_URL}/v0.23.6/${ZOLA_TAR}" -o /tmp/zola.tar.gz
+          echo "${ZOLA_SHA}  /tmp/zola.tar.gz" | sha256sum -c -
+          sudo tar xz -f /tmp/zola.tar.gz -C /usr/local/bin
+          rm -f /tmp/zola.tar.gz
           zola --version
 
       - name: Build Rust WASM (if present)
@@ -95,7 +99,7 @@ jobs:
 
       - name: Publish production deploy to Netlify
         run: |
-          npm install --global netlify-cli
+          npm install --global netlify-cli@27.20.0
           netlify deploy \
             --no-build \
             --prod \
