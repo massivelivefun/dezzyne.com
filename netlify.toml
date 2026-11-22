@@ -31,7 +31,7 @@
     Content-Security-Policy = """\
       default-src 'none'; \
       script-src 'self' 'wasm-unsafe-eval'; \
-      style-src 'sha256-vU0vrfwAt9Tr5w3ry8jGUYhN+ZfpHXYHH7S8m/bRSU8='; \
+      style-src 'sha256-i+lrxWcylNa+NHYTuGtmdcliORrNzZtGVICOgCgn/wI='; \
       img-src 'self'; \
       font-src 'self'; \
       connect-src 'self'; \
