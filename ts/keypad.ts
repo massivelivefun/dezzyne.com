@@ -316,7 +316,14 @@ void main() {
 
     vec3 boundsMinimum = vec3(-74.0, -74.0, -9.0);
     vec3 boundsMaximum = vec3(74.0, 74.0, 30.0);
-    vec3 inverseDirection = 1.0 / (localDirection + vec3(1e-7));
+    vec3 safeDirectionSign = mix(
+        vec3(-1.0),
+        vec3(1.0),
+        greaterThanEqual(localDirection, vec3(0.0))
+    );
+    vec3 safeDirection =
+        safeDirectionSign * max(abs(localDirection), vec3(1e-5));
+    vec3 inverseDirection = 1.0 / safeDirection;
     vec3 planeNear = (boundsMinimum - localOrigin) * inverseDirection;
     vec3 planeFar = (boundsMaximum - localOrigin) * inverseDirection;
     vec3 smallerPlanes = min(planeNear, planeFar);
