@@ -101,7 +101,10 @@ const WASM_MODULE_URL: SafeRelativeHref =
     "/wasm/dezzyne_bg.wasm" as SafeRelativeHref;
 const MAXIMUM_WASM_BYTES: ByteCount = asByteCount(65536);
 const MINIMUM_WASM_BYTES: ByteCount = asByteCount(8);
-const MAXIMUM_STAGE_DIMENSION: DevicePixels = asDevicePixels(8192);
+const MAXIMUM_STAGE_DIMENSION: DevicePixels = asDevicePixels(3840);
+const MAXIMUM_STAGE_PIXELS: number = 4200000;
+const MINIMUM_FOCUSED_FRAME_MS: Milliseconds = asMilliseconds(10.5);
+const MINIMUM_UNFOCUSED_FRAME_MS: Milliseconds = asMilliseconds(32.0);
 
 const SCENE_GRID = 0 as const;
 const SCENE_PORTALS = 1 as const;
@@ -249,7 +252,7 @@ interface StageRenderer {
         particleCount: ElementCount,
         particlesBuffer: ParticlesInstanceBuffer | null
     ): boolean;
-    dispose(): void;
+    dispose(isContextAlreadyLost: boolean): void;
 }
 
 const DARK_SKYBOX_IDS: readonly DarkSkyboxId[] = Object.freeze([
@@ -275,7 +278,7 @@ const WEBGL_CONTEXT_OPTIONS: WebGLContextAttributes = Object.freeze({
     antialias: false,
     depth: false,
     stencil: false,
-    powerPreference: "high-performance",
+    powerPreference: "default",
 });
 
 const REQUIRED_FUNCTION_EXPORTS: readonly (keyof WasmStageExports)[] =
@@ -1949,7 +1952,10 @@ function createStageRenderer(
 
             return true;
         },
-        dispose(): void {
+        dispose(isContextAlreadyLost: boolean): void {
+            if (isContextAlreadyLost || glContext.isContextLost()) {
+                return;
+            }
             try {
                 if (labelManager) {
                     labelManager.dispose();
@@ -1981,11 +1987,6 @@ function createStageRenderer(
                 glContext.deleteBuffer(triangleBuffer);
                 glContext.deleteVertexArray(gridVertexArray);
                 glContext.deleteProgram(gridProgram);
-                const loseContextExtension: WEBGL_lose_context | null =
-                    glContext.getExtension("WEBGL_lose_context");
-                if (loseContextExtension) {
-                    loseContextExtension.loseContext();
-                }
             } catch {}
         },
     };
@@ -2184,6 +2185,9 @@ function initializeStage(): void {
     let devicePixelRatio: DevicePixelRatio = maximumDevicePixelRatio;
     let animationFrameId: AnimationFrameHandle = asAnimationFrameHandle(0);
     let previousTimestamp: Milliseconds = asMilliseconds(performance.now());
+    let hasRenderedFirstLoopFrame: boolean = false;
+    let isWindowFocused: boolean =
+        typeof document.hasFocus === "function" ? document.hasFocus() : true;
     let isStopped: boolean = false;
 
     let wasmExports: WasmStageExports | null = null;
@@ -2211,6 +2215,24 @@ function initializeStage(): void {
         return asDevicePixels(clamped);
     }
 
+    function computeCappedPixelRatio(
+        widthCss: CssPixels,
+        heightCss: CssPixels,
+        maxRatio: DevicePixelRatio
+    ): DevicePixelRatio {
+        const rawArea: number = widthCss * heightCss * maxRatio * maxRatio;
+        if (rawArea <= MAXIMUM_STAGE_PIXELS) {
+            return maxRatio;
+        }
+        const cssArea: number = Math.max(1, widthCss * heightCss);
+        const areaScale: number = Math.sqrt(MAXIMUM_STAGE_PIXELS / cssArea);
+        const clampedRatio: number = Math.max(
+            0.5,
+            Math.min(maxRatio, areaScale)
+        );
+        return asDevicePixelRatio(clampedRatio);
+    }
+
     function measureStageContainer(): boolean {
         const containerBounds: DOMRect =
             stageContainer.getBoundingClientRect();
@@ -2226,7 +2248,11 @@ function initializeStage(): void {
         ) {
             cssHeight = asCssPixels(Math.max(1, containerBounds.height));
         }
-        devicePixelRatio = maximumDevicePixelRatio;
+        devicePixelRatio = computeCappedPixelRatio(
+            cssWidth,
+            cssHeight,
+            maximumDevicePixelRatio
+        );
         const targetWidth: DevicePixels = clampStageDimension(
             cssWidth * devicePixelRatio
         );
@@ -2375,7 +2401,7 @@ function initializeStage(): void {
             wasmExports = loadedExports;
             scheduleAnimationFrame();
         } catch {
-            shutdownToFallback();
+            shutdownToFallback(false);
         }
     }
 
@@ -2521,7 +2547,7 @@ function initializeStage(): void {
         applyStageLinkHref(resolvedHref);
     }
 
-    function shutdownToFallback(): void {
+    function shutdownToFallback(isContextAlreadyLost: boolean): void {
         if (isStopped) {
             return;
         }
@@ -2532,16 +2558,19 @@ function initializeStage(): void {
         applyStageLinkHref("");
         stageContainer.classList.remove("site-stage--interactive-hover");
         stage.classList.remove("stage--ready");
-        stageRenderer.dispose();
+        stageRenderer.dispose(isContextAlreadyLost);
+        if (!isContextAlreadyLost) {
+            stage.width = 1;
+            stage.height = 1;
+        }
     }
 
     resizeObserver.observe(stageContainer);
 
     stage.addEventListener(
         "webglcontextlost",
-        (contextEvent: Event): void => {
-            contextEvent.preventDefault();
-            shutdownToFallback();
+        (): void => {
+            shutdownToFallback(true);
         },
         { signal: abortSignal }
     );
@@ -2919,7 +2948,7 @@ function initializeStage(): void {
             null
         );
         if (!renderedGrid) {
-            shutdownToFallback();
+            shutdownToFallback(false);
             return;
         }
         scheduleAnimationFrame();
@@ -2935,8 +2964,21 @@ function initializeStage(): void {
                     ? rawTimestamp
                     : previousTimestamp + 16
             );
-            const elapsedSeconds: number =
-                (safeTimestamp - previousTimestamp) / 1000;
+            const elapsedMilliseconds: number =
+                safeTimestamp - previousTimestamp;
+            const minimumInterval: Milliseconds = isWindowFocused
+                ? MINIMUM_FOCUSED_FRAME_MS
+                : MINIMUM_UNFOCUSED_FRAME_MS;
+            if (
+                hasRenderedFirstLoopFrame &&
+                elapsedMilliseconds >= 0 &&
+                elapsedMilliseconds < minimumInterval
+            ) {
+                scheduleAnimationFrame();
+                return;
+            }
+            hasRenderedFirstLoopFrame = true;
+            const elapsedSeconds: number = elapsedMilliseconds / 1000;
             const deltaSeconds: Seconds = asSeconds(
                 Math.min(0.1, Math.max(0.0005, elapsedSeconds))
             );
@@ -2955,13 +2997,16 @@ function initializeStage(): void {
 
             const entitiesReady: WasmBooleanFlag =
                 stageRenderer.areEntitiesReady() ? 1 : 0;
+            const stepDeltaSeconds: Seconds = isWindowFocused
+                ? deltaSeconds
+                : asSeconds(Math.min(0.034, deltaSeconds));
             const qualityTier: QualityTier = wasmExports.step_scene(
-                deltaSeconds,
+                stepDeltaSeconds,
                 motionScale,
                 entitiesReady
             );
             if (qualityTier >= 2) {
-                shutdownToFallback();
+                shutdownToFallback(false);
                 return;
             }
             if (qualityTier >= 1) {
@@ -2985,13 +3030,13 @@ function initializeStage(): void {
 
             const renderedFrame: boolean = drawCurrentWasmViews();
             if (!renderedFrame) {
-                shutdownToFallback();
+                shutdownToFallback(false);
                 return;
             }
 
             scheduleAnimationFrame();
         } catch {
-            shutdownToFallback();
+            shutdownToFallback(false);
         }
     }
 
@@ -3006,7 +3051,34 @@ function initializeStage(): void {
                 return;
             }
             previousTimestamp = asMilliseconds(performance.now());
+            hasRenderedFirstLoopFrame = false;
             scheduleAnimationFrame();
+        },
+        { passive: true, signal: abortSignal }
+    );
+
+    window.addEventListener(
+        "focus",
+        (): void => {
+            isWindowFocused = true;
+            if (isStopped || document.hidden) {
+                return;
+            }
+            previousTimestamp = asMilliseconds(performance.now());
+            hasRenderedFirstLoopFrame = false;
+            scheduleAnimationFrame();
+        },
+        { passive: true, signal: abortSignal }
+    );
+
+    window.addEventListener(
+        "blur",
+        (): void => {
+            isWindowFocused = false;
+            if (isStopped) {
+                return;
+            }
+            sendPointerLeave();
         },
         { passive: true, signal: abortSignal }
     );
@@ -3018,6 +3090,7 @@ function initializeStage(): void {
                 return;
             }
             previousTimestamp = asMilliseconds(performance.now());
+            hasRenderedFirstLoopFrame = false;
             scheduleAnimationFrame();
         },
         { passive: true, signal: abortSignal }
